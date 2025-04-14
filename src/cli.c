@@ -47,7 +47,7 @@ typedef struct {
 // Global Variables
 //******************************************************************************
 
-cli_cmd_t cli_func_arr[CLI_FUNC_CNT];
+static cli_cmd_t cli_func_arr[CLI_FUNC_CNT];
 
 static char rx_buff[CLI_BUFF_SIZE];
 static char rx_words[CLI_WORD_CNT][CLI_WORD_SIZE];
@@ -65,12 +65,12 @@ void cli_init(void)
         rx_args[i] = rx_words[i];
 }
 
-/***************************************************************************//**
-* @brief Extract single words from a buffer of text and populate rx_words.
-* @param in_buff [in] - pointer to text buffer from where to extract the words
-* @param len [in] - length of the text buffer in_buff
-* @return count of extracted words
-*******************************************************************************/
+/*******************************************************************************
+ * @brief Extract single words from a buffer of text and populate rx_words.
+ * @param in_buff [in] - pointer to text buffer from where to extract the words
+ * @param len [in] - length of the text buffer in_buff
+ * @return count of extracted words
+ ******************************************************************************/
 static int rx_extract_words(const char * in_buff, int len)
 {
     int idx1, idx2, word;
@@ -112,15 +112,15 @@ static int rx_extract_words(const char * in_buff, int len)
     return word;
 }
 
-/***************************************************************************//**
-* @brief Search the function in the list of functions that satisfies conditions:
-*        1. if command definition has an option (opt != NULL) check if both:
-*           (rx_words[0] == cmd) and (rx_words[1] == opt)
-*        2. if no command satisfies the 1 condition return the "default"
-*           command with no option: (rx_words[0] == cmd) and (opt != NULL)
-*           if there is such a command.
-* @return pointer to the command found or NULL in case no command found
-*******************************************************************************/
+/*******************************************************************************
+ * @brief Search the function in the list of functions that satisfies conditions:
+ *         1. if command definition has an option (opt != NULL) check if both:
+ *            (rx_words[0] == cmd) and (rx_words[1] == opt)
+ *         2. if no command satisfies the 1 condition return the "default"
+ *            command with no option: (rx_words[0] == cmd) and (opt != NULL)
+ *            if there is such a command.
+ * @return pointer to the command found or NULL in case no command found
+ ******************************************************************************/
 static const cli_cmd_t * search_func(void)
 {
     const cli_cmd_t * def_cmd_ptr = NULL;
@@ -147,9 +147,9 @@ static const cli_cmd_t * search_func(void)
     return def_cmd_ptr;
 }
 
-/***************************************************************************//**
-* @brief Poll CLI module, must be called every program cycle
-*******************************************************************************/
+/*******************************************************************************
+ * @brief Poll CLI module, must be called every program cycle
+ ******************************************************************************/
 void cli_poll(void)
 {
     // Something received?
@@ -181,14 +181,14 @@ void cli_poll(void)
     }
 }
 
-/***************************************************************************//**
-* @brief Add function
-* @param cmd [in] name of the command to add
-* @param opt [in] name of the comands option
-* @param func [in] function pointer name of the command to add
-* @param info [in] information name of the command to add
-* @return true if command successfully added or false in case there is no free space
-*******************************************************************************/
+/*******************************************************************************
+ * @brief Add function
+ * @param cmd [in] name of the command to add
+ * @param opt [in] name of the comands option
+ * @param func [in] function pointer name of the command to add
+ * @param info [in] information name of the command to add
+ * @return true if command successfully added or false in case there is no free space
+ ******************************************************************************/
 bool cli_add_func(const char * cmd, const char * opt, cli_func_t func, const char * info)
 {
     // Find first empty slot and populate command
@@ -206,9 +206,9 @@ bool cli_add_func(const char * cmd, const char * opt, cli_func_t func, const cha
     return false;
 }
 
-/***************************************************************************//**
-* @brief Display the list of all functions/commands and their info
-*******************************************************************************/
+/*******************************************************************************
+ * @brief Display the list of all functions/commands and their info
+ ******************************************************************************/
 void cli_func_list(void)
 {
     for(int i = 0; i < CLI_FUNC_CNT; i++)

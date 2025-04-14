@@ -35,17 +35,17 @@
 // Global Variables
 //******************************************************************************
 
-/***************************************************************************//**
-* @brief Extract integer value from a text-string
-* @param out_val [out] pointer to integer where the extracted int is copied
-* @param in_str [in] pointer to the input string
-* @param in_max_len [in] maximal length of the input string
-* @return End position in in_str of the extracted integer or -1 in case of error
-*        Example:        01234567890123
-*                in_str = "   1234   ABC "
-*                *out_val = 1234
-*                return = 7
-*******************************************************************************/
+/*******************************************************************************
+ * @brief Extract integer value from a text-string
+ * @param out_val [out] pointer to integer where the extracted int is copied
+ * @param in_str [in] pointer to the input string
+ * @param in_max_len [in] maximal length of the input string
+ * @return End position in in_str of the extracted integer or -1 in case of error
+ *         Example:        01234567890123
+ *                 in_str = "   1234   ABC "
+ *                 *out_val = 1234
+ *                 return = 7
+ ******************************************************************************/
 int utils_extract_int(int * out_val, const char * in_str, int in_max_len)
 {
     int val = 0, idx = 0;
@@ -91,15 +91,15 @@ int utils_extract_int(int * out_val, const char * in_str, int in_max_len)
     return -1;
 }
 
-/***************************************************************************//**
-* @brief Convert a string to a decimal integer. The string must not contain
-*        leading or trailing spaces/tabs. It must end with '\0'. Only the 
-*        following characters are allowed '-0123456789'
-* @param out_val [out] pointer to integer where converted value is stored
-* @param in_str [in] string containing an integer (in decimal representation)
-* @param in_max_len [in] maximal length of in_str string
-* @return true if string successfully converted to integer or false in case of error
-*******************************************************************************/
+/*******************************************************************************
+ * @brief Convert a string to a decimal integer. The string must not contain
+ *         leading or trailing spaces/tabs. It must end with '\0'. Only the 
+ *         following characters are allowed '-0123456789'
+ * @param out_val [out] pointer to integer where converted value is stored
+ * @param in_str [in] string containing an integer (in decimal representation)
+ * @param in_max_len [in] maximal length of in_str string
+ * @return true if string successfully converted to integer or false in case of error
+ ******************************************************************************/
 bool utils_get_int_dec(int * out_val, const char * in_str, int in_max_len)
 {
     int val = 0, idx = 0;
@@ -144,15 +144,15 @@ bool utils_get_int_dec(int * out_val, const char * in_str, int in_max_len)
     return (idx > 0);
 }
 
-/***************************************************************************//**
-* @brief Convert a string representing a hexadecimal integer to integer. 
-*        The string must not contain leading or trailing spaces/tabs. 
-*        It must end with '\0'. Only the characters are allowed: '0123456789ABCDEF'
-* @param out_val [out] pointer to integer where converted value is stored
-* @param in_str [in] string containing an integer (in hexadecimal representation)
-* @param in_max_len [in] maximal length of in_str string
-* @return true if string successfully converted to integer or false in case of error
-*******************************************************************************/
+/*******************************************************************************
+ * @brief Convert a string representing a hexadecimal integer to integer. 
+ *         The string must not contain leading or trailing spaces/tabs. 
+ *         It must end with '\0'. Only the characters are allowed: '0123456789ABCDEF'
+ * @param out_val [out] pointer to integer where converted value is stored
+ * @param in_str [in] string containing an integer (in hexadecimal representation)
+ * @param in_max_len [in] maximal length of in_str string
+ * @return true if string successfully converted to integer or false in case of error
+ ******************************************************************************/
 bool utils_get_int_hex(int * out_val, const char * in_str, int in_max_len)
 {
     int val = 0, idx = 0;
@@ -184,14 +184,14 @@ bool utils_get_int_hex(int * out_val, const char * in_str, int in_max_len)
     return (idx > 0);
 }
 
-/***************************************************************************//**
-* @brief Convert a string representing an integer (decimal or hexadecimal form) 
-*        to integer. If the string contain an integer in a hexadecimal form, 
-*        it must start with '0x'
-* @param out_val [out] pointer to integer where converted value is stored
-* @param in_str [in] string containing an integer (in decimal or hex representation)
-* @param in_max_len [in] maximal length of in_str string
-* @return true if string successfully converted to integer or false in case of error
+/*******************************************************************************
+ * @brief Convert a string representing an integer (decimal or hexadecimal form) 
+ *        to integer. If the string contain an integer in a hexadecimal form, 
+ *        it must start with '0x'
+ * @param out_val [out] pointer to integer where converted value is stored
+ * @param in_str [in] string containing an integer (in decimal or hex representation)
+ * @param in_max_len [in] maximal length of in_str string
+ * @return true if string successfully converted to integer or false in case of error
 *******************************************************************************/
 bool utils_get_int(int * out_val, const char * in_str, int in_max_len)
 {
@@ -207,15 +207,15 @@ bool utils_get_int(int * out_val, const char * in_str, int in_max_len)
     return utils_get_int_dec(out_val, in_str, in_max_len);
 }
 
-/***************************************************************************//**
-* @brief Convert a string to a decimal long-integer. The string must not contain
-*        leading or trailing spaces/tabs. It must end with '\0'. Only the 
-*        following characters are allowed '-0123456789'
-* @param out_val [out] pointer to long-integer where converted value is stored
-* @param in_str [in] string containing an long-integer (in decimal representation)
-* @param in_max_len [in] maximal length of in_str string
-* @return true if string successfully converted to long-integer or false in case of error
-*******************************************************************************/
+/*******************************************************************************
+ * @brief Convert a string to a decimal long-integer. The string must not contain
+ *        leading or trailing spaces/tabs. It must end with '\0'. Only the 
+ *        following characters are allowed '-0123456789'
+ * @param out_val [out] pointer to long-integer where converted value is stored
+ * @param in_str [in] string containing an long-integer (in decimal representation)
+ * @param in_max_len [in] maximal length of in_str string
+ * @return true if string successfully converted to long-integer or false in case of error
+ ******************************************************************************/
 bool utils_get_long_dec(long * out_val, const char * in_str, int in_max_len)
 {
     long val = 0;
@@ -261,15 +261,15 @@ bool utils_get_long_dec(long * out_val, const char * in_str, int in_max_len)
     return (idx > 0);
 }
 
-/***************************************************************************//**
-* @brief Convert a string representing a hexadecimal long-integer to long-integer. 
-*        The string must not contain leading or trailing spaces/tabs. 
-*        It must end with '\0'. Only the characters are allowed: '0123456789ABCDEF'
-* @param out_val [out] pointer to long-integer where converted value is stored
-* @param in_str [in] string containing an long-integer (in hexadecimal representation)
-* @param in_max_len [in] maximal length of in_str string
-* @return true if string successfully converted to long-integer or false in case of error
-*******************************************************************************/
+/*******************************************************************************
+ * @brief Convert a string representing a hexadecimal long-integer to long-integer. 
+ *        The string must not contain leading or trailing spaces/tabs. 
+ *        It must end with '\0'. Only the characters are allowed: '0123456789ABCDEF'
+ * @param out_val [out] pointer to long-integer where converted value is stored
+ * @param in_str [in] string containing an long-integer (in hexadecimal representation)
+ * @param in_max_len [in] maximal length of in_str string
+ * @return true if string successfully converted to long-integer or false in case of error
+ ******************************************************************************/
 bool utils_get_long_hex(long * out_val, const char * in_str, int in_max_len)
 {
     long val = 0L;
@@ -302,15 +302,15 @@ bool utils_get_long_hex(long * out_val, const char * in_str, int in_max_len)
     return (idx > 0);
 }
 
-/***************************************************************************//**
-* @brief Convert a string representing a long-integer (decimal or hexadecimal form) 
-*        to long-integer. If the string contain a long-integer in a hexadecimal form, 
-*        it must start with '0x'
-* @param out_val [out] pointer to long-integer where converted value is stored
-* @param in_str [in] string containing a long-integer (in decimal or hex representation)
-* @param in_max_len [in] maximal length of in_str string
-* @return true if string successfully converted to long-integer or false in case of error
-*******************************************************************************/
+/*******************************************************************************
+ * @brief Convert a string representing a long-integer (decimal or hexadecimal form) 
+ *        to long-integer. If the string contain a long-integer in a hexadecimal form, 
+ *        it must start with '0x'
+ * @param out_val [out] pointer to long-integer where converted value is stored
+ * @param in_str [in] string containing a long-integer (in decimal or hex representation)
+ * @param in_max_len [in] maximal length of in_str string
+ * @return true if string successfully converted to long-integer or false in case of error
+ ******************************************************************************/
 bool utils_get_long(long * out_val, const char * in_str, int in_max_len)
 {
     // If the string is less than 3 symbols it can be decoded only as decimal

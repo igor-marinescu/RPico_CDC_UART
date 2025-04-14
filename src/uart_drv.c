@@ -78,9 +78,9 @@ static volatile bool rx_buff0_semaphore = false;
 
 static uart_line_coding_t line_coding;
 
-/***************************************************************************//**
-* @brief UART Init function
-*******************************************************************************/
+/*******************************************************************************
+ * @brief UART Init function
+ ******************************************************************************/
 void uart_drv_init(const uart_line_coding_t * ptr_line_coding)
 {
     memcpy(&line_coding, ptr_line_coding, sizeof(line_coding));
@@ -157,9 +157,9 @@ static inline void _check_wr_jumps_over_rd(void)
     }
 }
 
-/***************************************************************************//**
-* @brief UART interrupt handler
-*******************************************************************************/
+/*******************************************************************************
+ * @brief UART interrupt handler
+ ******************************************************************************/
 void uart_drv_irq()
 {
     rx_wr_old = rx_wr_idx;
@@ -237,12 +237,12 @@ void uart_drv_irq()
     }
 }
 
-/***************************************************************************//**
-* @brief Send data to UART
-* @param buff [in] data to send to UART
-* @param len [in] count of bytes in buff to send to UART
-* @return count of copied bytes
-*******************************************************************************/
+/*******************************************************************************
+ * @brief Send data to UART
+ * @param buff [in] data to send to UART
+ * @param len [in] count of bytes in buff to send to UART
+ * @return count of copied bytes
+ ******************************************************************************/
 uint32_t uart_drv_send_buff(const uint8_t * buff, uint32_t len)
 {
     if((buff == NULL) || (len == 0UL))
@@ -317,21 +317,21 @@ uint32_t uart_drv_send_buff(const uint8_t * buff, uint32_t len)
     return copied;
 }
 
-/***************************************************************************//**
-* @brief Check if UART interrupt is active
-* @return true if UART interrupt is active
-*******************************************************************************/
+/*******************************************************************************
+ * @brief Check if UART interrupt is active
+ * @return true if UART interrupt is active
+ ******************************************************************************/
 bool uart_drv_check_irq(void)
 {
     return ((uart_get_hw(UART_ID)->ris & 0x00000020) != 0);
 }
 
-/***************************************************************************//**
-* @brief Check if there are received characters and copy them to buffer
-* @param buff [out] pointer to buffer where the received characters are copied
-* @param buff_max_len [in] the length in bytes (characters) of buff
-* @return count of copied received characters
-*******************************************************************************/
+/*******************************************************************************
+ * @brief Check if there are received characters and copy them to buffer
+ * @param buff [out] pointer to buffer where the received characters are copied
+ * @param buff_max_len [in] the length in bytes (characters) of buff
+ * @return count of copied received characters
+ ******************************************************************************/
 uint32_t uart_drv_get_rx(char * buff, uint32_t buff_max_len)
 {
     uint32_t buff_idx = 0UL;

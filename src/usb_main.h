@@ -41,7 +41,7 @@ void usb_main(void);
 uint32_t usb_get_rx(uint8_t * buff, uint32_t buff_len);
 
 // Set a buffer of data to be send on USB, return cnt of bytes written in tx buffer
-uint32_t usb_set_tx(uint8_t * buff, uint32_t buff_len);
+uint32_t usb_set_tx(const uint8_t * buff, uint32_t buff_len);
 
 // Return the count of line code changes
 uint32_t usb_has_line_coding_changed(void);

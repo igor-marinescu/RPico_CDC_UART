@@ -45,13 +45,52 @@
     #define MAIN_LOG(...)    
 #endif  
 
+// System time in micro-seconds
+typedef uint32_t ustime_t;
+
+//******************************************************************************
+// Global Variables
+//******************************************************************************
+
+// System time in us (since the board was powered-on)
+ustime_t sys_ustime = 0;
+
+// Data buffers used for USB-UART bridge functionality
+static uint32_t usb_rx_cnt = 0;
+static uint8_t  usb_rx_data[2048];
+static uint32_t usb_tx_cnt = 0;
+static uint8_t  usb_tx_data[2048];
+static uint32_t uart_tx_cnt = 0;
+static uint8_t  uart_tx_data[2048];
+static uint32_t uart_rx_cnt = 0;
+static uint8_t  uart_rx_data[2048];
+
+// USB line coding
+uint32_t usb_line_coding_changed_cnt = 0;
+cdc_line_coding_t usb_line_coding;
+
+// UART line codding
+uart_line_coding_t uart_line_coding = {
+    .bit_rate = 115200,
+    .data_bits = 8,
+    .stop_bits = 1,
+    .parity = UART_PARITY_NONE
+};
+
+// Detect pause in UART reception
+ustime_t uart_rx_ustime = 0;
+
+#ifdef UART_RX_BYTES_TOUT
+ustime_t uart_rx_tout_ustime;
+#endif
+
 /*******************************************************************************
  * @brief Display the list of all commands and their info
  * @param argc [in] - arguments count
  * @param args [in] - array with pointers to arguments string
  * @return true if function successfully executed, false in case of error
  ******************************************************************************/
-bool cli_func_help(int argc, char ** args)
+static bool cli_func_help(int argc, char ** args)
 {
     cli_func_list();
     return true;
@@ -63,7 +102,7 @@ bool cli_func_help(int argc, char ** args)
  * @param args [in] - array with pointers to arguments string
  * @return true if function successfully executed, false in case of error
  ******************************************************************************/
-bool cli_func_boot(int argc, char ** args)
+static bool cli_func_boot(int argc, char ** args)
 {
     MAIN_LOG("Jump to boot now!\r\n");
     /*
@@ -90,7 +129,7 @@ bool cli_func_boot(int argc, char ** args)
 * @param args [in] - array with pointers to arguments string
 * @return true if function successfully executed, false in case of error
 *******************************************************************************/
-bool cli_func_memdump(int argc, char ** args)
+static bool cli_func_memdump(int argc, char ** args)
 {
     long addr;
     int len;
@@ -112,7 +151,7 @@ bool cli_func_memdump(int argc, char ** args)
 /*******************************************************************************
  * @brief Test function for inserting an artificial delay (for test purposes only)
  ******************************************************************************/
-void test_delay(void)
+static void test_delay(void)
 {
     static volatile long test1 = 0;
     static volatile long test2 = 0;
@@ -129,31 +168,91 @@ void test_delay(void)
 }
 
 /*******************************************************************************
+ * @brief Convert USB line coding to UART line coding
+ * @param [in] ptr_usb_lc - pointer to USB line coding
+ * @param [out] ptr_uart_lc - pointer to UART line coding
+ ******************************************************************************/
+static void line_coding_usb_to_uart(uart_line_coding_t * ptr_uart_lc, const cdc_line_coding_t * ptr_usb_lc)
+{
+    ptr_uart_lc->bit_rate = (unsigned int) ptr_usb_lc->bit_rate;
+
+    // USB stop bits: 0 = 1 stop bit, 1 = 1.5 stop bits, 2 = 2 stop bits
+    // UART stop bits: 1 = 1 stop bit, 2 = 2 stop bits
+    ptr_uart_lc->stop_bits = (unsigned int) ((ptr_usb_lc->stop_bits == 0) ? 1 : 2);
+    
+    ptr_uart_lc->data_bits = (unsigned int) ptr_usb_lc->data_bits;
+
+    // USB parity: 0 = None, 1 = Odd, 2 = Even, 3 = Mark, 4 = Space
+    // UART parity: UART_PARITY_NONE (0), UART_PARITY_EVEN (1), UART_PARITY_ODD (2)
+    if(ptr_usb_lc->parity == 1)
+        ptr_uart_lc->parity = UART_PARITY_ODD;
+    else if(ptr_usb_lc->parity == 2)
+        ptr_uart_lc->parity = UART_PARITY_EVEN;
+    else
+        ptr_uart_lc->parity = UART_PARITY_NONE;
+}
+
+/*******************************************************************************
+ * @brief Get System Time in us
+ *        Warning! This is not safe in case of multi-core
+ * @return System Time in us
+ ******************************************************************************/
+ustime_t get_sys_ustime(void)
+{
+    uint32_t lr = timer_hw->timelr;
+    timer_hw->timehr;
+    return (ustime_t) lr;
+}
+
+/*******************************************************************************
+ * @brief Get the difference (always positive) between two ustime_t variables
+ * @param end_ustime [in] end ustime_t variable
+ * @param start_ustime [in] start ustime_t variable
+ * @return difference: end_ustime - start_ustime
+ ******************************************************************************/
+ustime_t get_diff_ustime(const ustime_t end_ustime, const ustime_t start_ustime)
+{
+    int32_t diff = ((int32_t) end_ustime) - ((int32_t) start_ustime);
+    if(diff < 0)
+        return (ustime_t)(-diff);
+    return (ustime_t)(diff);
+}
+
+/*******************************************************************************
+ * @brief Calculate time necessary to send/receive a number of bytes over UART
+ *        (depending on UART line coding)
+ * 
+ *              1 [s] * bytes_cnt * bits_pro_byte [bits]
+ *  time [us] = ----------------------------------------
+ *                       baudrate [bits/s]
+ * 
+ *              1000000 [us] * bytes_cnt * (1 + data_bits + stop_bits) [bits]
+ *  time [us] = -------------------------------------------------------------
+ *                                  baudrate [bits/s]
+ * 
+ * @param [in] ptr_uart_lc - pointer to UART line coding
+ * @param [in] bytes_cnt - count of bytes to transfer
+ * @return time in [us] required to transfer a number of bytes
+*******************************************************************************/
+ustime_t get_uart_ustime(const uart_line_coding_t * ptr_uart_lc, const uint32_t bytes_cnt)
+{
+    if(!ptr_uart_lc || (ptr_uart_lc->bit_rate == 0))
+        return 0;
+
+    uint32_t val = 1;
+    val += (uint32_t) ptr_uart_lc->data_bits;
+    val += (uint32_t) ptr_uart_lc->stop_bits;
+    val *= bytes_cnt;
+    val *= 1000000;
+
+    return (ustime_t)(val / (uint32_t) ptr_uart_lc->bit_rate);
+}
+
+/*******************************************************************************
  * @brief Program main cycle
  ******************************************************************************/
 int main(void)
 {
-    uint32_t usb_rx_cnt = 0UL;
-    uint8_t  usb_rx_data[2048];
-
-    uint32_t usb_tx_cnt = 0UL;
-    uint8_t  usb_tx_data[2048];
-
-    uint32_t uart_tx_cnt = 0UL;
-    uint8_t  uart_tx_data[2048];
-
-    uint32_t uart_rx_cnt = 0UL;
-    uint8_t  uart_rx_data[2048];
-
-    uint32_t usb_line_coding_changed_cnt = 0;
-    cdc_line_coding_t usb_line_coding;
-
-    uart_line_coding_t uart_line_coding;
-    uart_line_coding.bit_rate = 115200;
-    uart_line_coding.data_bits = 8;
-    uart_line_coding.stop_bits = 1;
-    uart_line_coding.parity = UART_PARITY_NONE;
-
     board_init();
 
     // init device stack on configured roothub port
@@ -177,8 +276,13 @@ int main(void)
 
     multicore_launch_core1(usb_main);
 
+    #ifdef UART_RX_BYTES_TOUT
+    uart_rx_tout_ustime = get_uart_ustime(&uart_line_coding, UART_RX_BYTES_TOUT);
+    #endif
+
     while(1)
     {
+        sys_ustime = get_sys_ustime();
         TP_TGL(TP3);
 
         if(uart_tx_cnt > sizeof(uart_tx_data))
@@ -192,7 +296,7 @@ int main(void)
 
         //----------------------------------------------------------------------
 
-        // Check if line coding has changed?
+        // Check if USB line coding has changed and apply same settings to UART
         if(usb_line_coding_changed_cnt != usb_has_line_coding_changed())
         {
             usb_line_coding_changed_cnt = usb_get_line_coding(&usb_line_coding);
@@ -202,21 +306,12 @@ int main(void)
                     usb_line_coding.stop_bits,
                     usb_line_coding.parity);
 
-            // Convert USB line coding to UART line coding and reinit UART
-            uart_line_coding.bit_rate = (unsigned int) usb_line_coding.bit_rate;
-            // USB stop bits: 0 = 1 stop bit, 1 = 1.5 stop bits, 2 = 2 stop bits
-            // UART stop bits: 1 = 1 stop bit, 2 = 2 stop bits
-            uart_line_coding.stop_bits = (unsigned int) ((usb_line_coding.stop_bits == 0) ? 1 : 2);
-            uart_line_coding.data_bits = (unsigned int) usb_line_coding.data_bits;
-            // USB parity: 0 = None, 1 = Odd, 2 = Even, 3 = Mark, 4 = Space
-            // UART parity: UART_PARITY_NONE (0), UART_PARITY_EVEN (1), UART_PARITY_ODD (2)
-            if(usb_line_coding.parity == 1)
-                uart_line_coding.parity = UART_PARITY_ODD;
-            else if(usb_line_coding.parity == 2)
-                uart_line_coding.parity = UART_PARITY_EVEN;
-            else
-                uart_line_coding.parity = UART_PARITY_NONE;
+            line_coding_usb_to_uart(&uart_line_coding, &usb_line_coding);
             uart_drv_init(&uart_line_coding);
+
+            #ifdef UART_RX_BYTES_TOUT
+            uart_rx_tout_ustime = get_uart_ustime(&uart_line_coding, UART_RX_BYTES_TOUT);
+            #endif
         }
 
         //----------------------------------------------------------------------
@@ -245,15 +340,23 @@ int main(void)
         // USB data to send?
         if(usb_tx_cnt > 0)
         {
-            uint32_t sent = usb_set_tx(usb_tx_data, usb_tx_cnt);
-            if(sent < usb_tx_cnt)
+#ifdef UART_RX_BYTES_TOUT
+            // Send UART->USB only when we received >= 64 bytes
+            // or there is a delay of >= 2 bytes-time from UART
+            if((usb_tx_cnt >= 64) 
+            || (get_diff_ustime(uart_rx_ustime, sys_ustime) > uart_rx_tout_ustime))
+#endif
             {
-                // Could not send all data? Move the remaining USB tx buffer
-                // to left to send it next time
-                memmove(&usb_tx_data[0], &usb_tx_data[sent],  usb_tx_cnt - sent);
-                usb_tx_cnt -= sent;
+                uint32_t sent = usb_set_tx(usb_tx_data, usb_tx_cnt);
+                if(sent < usb_tx_cnt)
+                {
+                    // Could not send all data? Move the remaining USB tx buffer
+                    // to left to send it next time
+                    memmove(&usb_tx_data[0], &usb_tx_data[sent],  usb_tx_cnt - sent);
+                    usb_tx_cnt -= sent;
+                }
+                else usb_tx_cnt = 0UL;
             }
-            else usb_tx_cnt = 0UL;
         }
 
         //----------------------------------------------------------------------
@@ -279,6 +382,7 @@ int main(void)
             }
 
             uart_rx_cnt = 0;
+            uart_rx_ustime = sys_ustime;
         }
 
         // UART data to send?

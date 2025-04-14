@@ -77,9 +77,9 @@ static uint16_t dbg_idx = 0;
 #endif
 
 /*******************************************************************************
- * @brief UART Init function
+ * @brief UART-Ascii Init function
  ******************************************************************************/
-void uart_ascii_init()
+void uart_ascii_init(void)
 {
     // Set up our UART with a basic baud rate.
     uart_init(UART_ASCII_ID, 2400);
@@ -252,8 +252,9 @@ void uart_ascii_puts(const char * txt)
 }
 
 /*******************************************************************************
- * @brief 
- * @param
+ * @brief Get the ascii-hex representation of the low part of a byte (bits 3..0)
+ * @param [in] digit - byte to be represented as ascii-hex
+ * @return ascii-hex representation of the lower part of the byte
  ******************************************************************************/
 static inline char hex_digit(unsigned char digit)
 {
@@ -296,7 +297,7 @@ int uart_ascii_printf0(const char* format, ...)
 
 /*******************************************************************************
  * @brief Write formatted data from variable argument list to UART
- *        The output text can be formated using UART_DBG_LVL
+ *        The output text can be formatted using UART_DBG_LVL
  * @param format [in] string that contains the format string (see printf)
  * @return the number of characters sent to UART
  ******************************************************************************/

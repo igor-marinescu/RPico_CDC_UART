@@ -44,7 +44,7 @@
 //******************************************************************************
 
 // UART Init function
-void uart_ascii_init();
+void uart_ascii_init(void);
 
 // Write text to UART
 void uart_ascii_puts(const char * txt);

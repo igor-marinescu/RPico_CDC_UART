@@ -74,10 +74,10 @@ static cdc_line_coding_t line_coding;
 static uint32_t line_coding_changed = 0;
 static struct mutex lc_mutex;
 
-//******************************************************************************
-// echo to either Serial0 or Serial1
-// with Serial0 as all lower case, Serial1 as all upper case
-//******************************************************************************
+/*******************************************************************************
+ * @brief Echo to either Serial0 or Serial1
+ * with Serial0 as all lower case, Serial1 as all upper case
+ ******************************************************************************/
 static void echo_serial_port(uint8_t itf, uint8_t buf[], uint32_t count)
 {
 
@@ -93,46 +93,51 @@ static void echo_serial_port(uint8_t itf, uint8_t buf[], uint32_t count)
 // Device callbacks
 //******************************************************************************
 
-//******************************************************************************
-// Invoked when device is mounted
-//******************************************************************************
+/*******************************************************************************
+ * @brief Callback
+ * Invoked when device is mounted
+ ******************************************************************************/
 void tud_mount_cb(void)
 {
     blink_interval_ms = BLINK_MOUNTED;
 }
 
-//******************************************************************************
-// Invoked when device is unmounted
-//******************************************************************************
+/*******************************************************************************
+ * @brief Callback
+ * Invoked when device is unmounted
+ ******************************************************************************/
 void tud_umount_cb(void)
 {
     blink_interval_ms = BLINK_NOT_MOUNTED;
 }
 
-//******************************************************************************
-// Invoked when usb bus is suspended
-// remote_wakeup_en : if host allow us  to perform remote wakeup
-// Within 7ms, device must draw an average of current less than 2.5 mA from bus
-//******************************************************************************
+/*******************************************************************************
+ * @brief Callback
+ * Invoked when usb bus is suspended
+ * remote_wakeup_en : if host allow us  to perform remote wakeup
+ * Within 7ms, device must draw an average of current less than 2.5 mA from bus
+ ******************************************************************************/
 void tud_suspend_cb(bool remote_wakeup_en)
 {
     (void) remote_wakeup_en;
     blink_interval_ms = BLINK_SUSPENDED;
 }
 
-//******************************************************************************
-// Invoked when usb bus is resumed
-//******************************************************************************
+/*******************************************************************************
+ * @brief Callback
+ * Invoked when usb bus is resumed
+ ******************************************************************************/
 void tud_resume_cb(void)
 {
     blink_interval_ms = tud_mounted() ? BLINK_MOUNTED : BLINK_NOT_MOUNTED;
 }
 
-//******************************************************************************
-// Invoked when cdc when line state changed e.g connected/disconnected
-// Invoked when line state DTR & RTS are changed via SET_CONTROL_LINE_STATE
-// Use to reset to DFU when disconnect with 1200 bps
-//******************************************************************************
+/*******************************************************************************
+ * @brief Callback
+ * Invoked when cdc when line state changed e.g connected/disconnected
+ * Invoked when line state DTR & RTS are changed via SET_CONTROL_LINE_STATE
+ * Use to reset to DFU when disconnect with 1200 bps
+ ******************************************************************************/
 void tud_cdc_line_state_cb(uint8_t instance, bool dtr, bool rts)
 {
     (void)rts;
@@ -182,7 +187,12 @@ void tud_cdc_line_coding_cb(uint8_t itf, cdc_line_coding_t const* p_line_coding)
     }
 }
 
-//******************************************************************************
+/*******************************************************************************
+ * @brief Check if there is new received data, and copy it to the buffer
+ * @param [out] buff - pointer to buffer where the received data is copied
+ * @param [in] buff_len - the length of the buff buffer in bytes
+ * @return count of copied bytes into buff buffer
+ ******************************************************************************/
 uint32_t usb_get_rx(uint8_t * buff, uint32_t buff_len)
 {
     // New received data available?
@@ -230,8 +240,13 @@ uint32_t usb_get_rx(uint8_t * buff, uint32_t buff_len)
     return cnt;
 }
 
-//******************************************************************************
-uint32_t usb_set_tx(uint8_t * buff, uint32_t buff_len)
+/*******************************************************************************
+ * @brief Write data tu USB transmit buffer (to be sent)
+ * @param [in] buff - pointer to data buffer to send
+ * @param [in] buff_len - length of the buff buffer in bytes
+ * @return count of bytes copied into USB transmit buffer
+ ******************************************************************************/
+uint32_t usb_set_tx(const uint8_t * buff, uint32_t buff_len)
 {
     uint32_t cnt = 0ul;
 
@@ -266,7 +281,9 @@ uint32_t usb_set_tx(uint8_t * buff, uint32_t buff_len)
     return buff_len;
 }
 
-//******************************************************************************
+/*******************************************************************************
+ * @brief USB CDC (Communication Device Class) main function
+ ******************************************************************************/
 static void cdc_task(void)
 {
 
@@ -346,7 +363,9 @@ static void cdc_task(void)
     }
 }
 
-//******************************************************************************
+/*******************************************************************************
+ * @brief Blink board LED according to USB state
+ ******************************************************************************/
 void led_blinking_task(void)
 {
     static uint32_t start_ms = 0;

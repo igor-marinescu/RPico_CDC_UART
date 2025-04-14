@@ -73,14 +73,32 @@ make
 
 ## Test
 
-Use python script `test/test.py` to test the data transfer in both directions (USB -> UART)
+Use python script `test/test.py` to test the data transfer in both directions (USB -> UART):
+
+```
+python3 test.py <usb/uart> <test_range_from> <test_range_to> <baudrate>
+```
+
+Example test: USB->UART, 1000 bytes (from 1 to 1000), baudrate 115200 bps:
+
+```
+python3 test.py usb 1 1000 115200
+```
+
+Example test: UART->USB, 200 bytes (from 100 to 300), baudrate 9600 bps:
+
+```
+python3 test.py uart 100 300 9600
+```
+
 Info:
 - PICO an USB attached is in linux as "/dev/ttyACMx" detected.
 - FTDI RS232-USB adapter is in linux as "/dev/ttyUSBx" detected.
 
-TODO: Attach code examples and circuit diagrams
-
 ## TODO
 
-- Implement USB send timeout: send UART->USB when >= 64 bytes have been received or no further data is received for 2 bytes long time (depending on baud rate). Do not send a small USB packet for each received UART byte.
+- Bug: After reset or line coding change - the first byte is lost. Why is the first byte not sent?
+- Modify python testscripts to use argparse.
+- Jump in bootloader without UART-Ascii, use a specific baudrate to jump to bootloader.
+- Modify deploy cmake target to invoke a script and to jump to bootloader without UART-Ascii.
 - Implement flow control. Continuously monitor the fullness of the receive/send buffer.
