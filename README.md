@@ -73,22 +73,43 @@ make
 
 ## Test
 
-Use python script `test/test.py` to test the data transfer in both directions (USB -> UART):
+Use python script `test/test.py` to test the data transfer in both directions (USB <-> UART):
 
-```
-python3 test.py <usb/uart> <test_range_from> <test_range_to> <baudrate>
+
+```bash
+python3 test.py -h
+usage: test.py [-h] [-a UART_DEVICE] [-u USB_DEVICE] [-b BAUDRATE] [-f FROM_VALUE] [-t TO_VALUE] send_device
+
+Test RPico_CDC_UART firmware.
+
+positional arguments:
+  send_device           Device that sends data (UART or USB
+
+options:
+  -h, --help            show this help message and exit
+  -a UART_DEVICE, --uart UART_DEVICE
+                        UART device (default: /dev/ttyUSB0)
+  -u USB_DEVICE, --usb USB_DEVICE
+                        USB device (default: /dev/ttyACM0)
+  -b BAUDRATE, --baudrate BAUDRATE
+                        Baudrate (default: 115200)
+  -f FROM_VALUE, --from FROM_VALUE
+                        Test range from (default: 1)
+  -t TO_VALUE, --to TO_VALUE
+                        Test range to (default: 2050)
+
 ```
 
 Example test: USB->UART, 1000 bytes (from 1 to 1000), baudrate 115200 bps:
 
 ```
-python3 test.py usb 1 1000 115200
+python3 test.py --to 1000 -b 115200 USB
 ```
 
 Example test: UART->USB, 200 bytes (from 100 to 300), baudrate 9600 bps:
 
 ```
-python3 test.py uart 100 300 9600
+python3 test.py --from 100 --to 300 -b 9600 UART
 ```
 
 Info:
@@ -98,7 +119,6 @@ Info:
 ## TODO
 
 - Bug: After reset or line coding change - the first byte is lost. Why is the first byte not sent?
-- Modify python testscripts to use argparse.
 - Jump in bootloader without UART-Ascii, use a specific baudrate to jump to bootloader.
 - Modify deploy cmake target to invoke a script and to jump to bootloader without UART-Ascii.
 - Implement flow control. Continuously monitor the fullness of the receive/send buffer.
