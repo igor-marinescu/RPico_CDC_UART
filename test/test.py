@@ -59,7 +59,7 @@ parser = argparse.ArgumentParser(prog='test.py',
             description='Test RPico_CDC_UART firmware.')
 
 parser.add_argument('send_device',
-            help='Device that sends data (UART or USB')
+            help='Device that sends data (UART or USB)')
 parser.add_argument('-a', '--uart', default=DEVICE_NAME_UART, dest='uart_device',
             help='UART device (default: %(default)s)')
 parser.add_argument('-u', '--usb', default=DEVICE_NAME_USB, dest='usb_device',

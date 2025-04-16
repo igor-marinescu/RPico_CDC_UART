@@ -71,6 +71,41 @@ cmake ../src/
 make
 ```
 
+## Deploy
+
+If the Raspberry Pi Pico has not yet been updated with `rpico_cdc_uart.uf2` (this is the first time the device is updated with this firmware): 
+Follow the standard steps to update the device: unplug from USB, press BOOTSEL, plug in the USB, release BOOTSEL, and copy the firmware to the mounted RPI-RP2 folder.
+
+If the Raspberry Pi Pico has already been updated with `rpico_cdc_uart.uf2`:
+Use `make deploy` command to automatically invoke the bootloader and copy the file to the mounted location:
+
+```
+$ make deploy
+[  1%] Built target bs2_default
+[  4%] Built target bs2_default_library
+[ 98%] Built target rpico_cdc_uart
+[100%] Deploying the firmware to pico
+Deploying to pico...
+Check if device mounted /media/igor/RPI-RP2/
+Device not yet mounted /media/igor/RPI-RP2/
+Trying to jump to boot using /dev/ttyACM0
+Device mounted /media/igor/RPI-RP2/
+Copy rpico_cdc_uart.uf2 --> /media/igor/RPI-RP2/
+Done
+[100%] Built target deploy
+```
+
+The script `scripts/firmware_update.py` checks if Raspberry Pi Pico not yet mounted, and sends a dummy byte at /dev/ttyACM0 uisng 1200 bps as baudrate. This reboots the board in bootlaoder mode. After this, the scripts copies the new firmware `rpico_cdc_uart.uf2` to the mounted location.
+
+Modify `CMakeLists.txt` file to specify the correct mounting point:
+
+```
+#-------------------------------------------------------------------------------
+# Deploy
+#-------------------------------------------------------------------------------
+set(RPICO_MOUNT_POINT "/media/igor/RPI-RP2/")
+```
+
 ## Test
 
 Use python script `test/test.py` to test the data transfer in both directions (USB <-> UART):
@@ -119,6 +154,5 @@ Info:
 ## TODO
 
 - Bug: After reset or line coding change - the first byte is lost. Why is the first byte not sent?
-- Jump in bootloader without UART-Ascii, use a specific baudrate to jump to bootloader.
 - Modify deploy cmake target to invoke a script and to jump to bootloader without UART-Ascii.
 - Implement flow control. Continuously monitor the fullness of the receive/send buffer.

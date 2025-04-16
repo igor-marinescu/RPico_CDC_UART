@@ -29,6 +29,7 @@
 #include "pico/sync.h"
 
 #include "gpio_drv.h"
+#include "pico/bootrom.h"
 
 //******************************************************************************
 // Defines
@@ -152,10 +153,21 @@ void tud_cdc_line_state_cb(uint8_t instance, bool dtr, bool rts)
             tud_cdc_get_line_coding(&coding);
             if(coding.bit_rate == 1200)
             {
-                if(board_reset_to_bootloader)
-                {
-                    board_reset_to_bootloader();
-                }
+                /*
+                * This function reboots the device into the BOOTSEL mode ('usb boot").
+                *
+                * Facilities are provided to enable an "activity light" via GPIO attached LED for the USB Mass Storage Device,
+                * and to limit the USB interfaces exposed.
+                *
+                * \param usb_activity_gpio_pin_mask 0 No pins are used as per a cold boot. Otherwise a single bit set indicating which
+                *                               GPIO pin should be set to output and raised whenever there is mass storage activity
+                *                               from the host.
+                * \param disable_interface_mask value to control exposed interfaces
+                *  - 0 To enable both interfaces (as per a cold boot)
+                *  - 1 To disable the USB Mass Storage Interface
+                *  - 2 To disable the USB PICOBOOT Interface
+                */
+                reset_usb_boot(0, 0);
             }
         }
     }
