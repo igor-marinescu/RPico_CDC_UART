@@ -85,18 +85,16 @@ void uart_drv_init(const uart_line_coding_t * ptr_line_coding)
 {
     memcpy(&line_coding, ptr_line_coding, sizeof(line_coding));
 
+    //uart_deinit(UART_ID);
+    //uart_get_hw(UART_ID)->dr = 0x00;
+
     // Set up our UART with a basic baud rate.
-    uart_init(UART_ID, 2400);
+    uart_init(UART_ID, line_coding.bit_rate);
 
     // Set the TX and RX pins by using the function select on the GPIO
     // Set datasheet for more information on function select
     gpio_set_function(UART_TX_PIN, GPIO_FUNC_UART);
     gpio_set_function(UART_RX_PIN, GPIO_FUNC_UART);
-
-    // Actually, we want a different speed
-    // The call will return the actual baud rate selected, which will be as close as
-    // possible to that requested
-    int __unused actual = uart_set_baudrate(UART_ID, line_coding.bit_rate);
 
     // Set UART flow control CTS/RTS, we don't want these, so turn them off
     uart_set_hw_flow(UART_ID, false, false);
@@ -119,7 +117,7 @@ void uart_drv_init(const uart_line_coding_t * ptr_line_coding)
     uart_set_irq_enables(UART_ID, true, false);
     
     //!!! Send an empty character first, without this uart_drv_irq is not called on send. Why?
-    uart_puts(UART_ID, " ");
+    uart_get_hw(UART_ID)->dr = 0x00;
 }
 
 /*******************************************************************************

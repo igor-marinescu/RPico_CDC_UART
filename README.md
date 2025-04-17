@@ -97,15 +97,6 @@ Done
 
 The script `scripts/firmware_update.py` checks if Raspberry Pi Pico not yet mounted, and sends a dummy byte at /dev/ttyACM0 uisng 1200 bps as baudrate. This reboots the board in bootlaoder mode. After this, the scripts copies the new firmware `rpico_cdc_uart.uf2` to the mounted location.
 
-Modify `CMakeLists.txt` file to specify the correct mounting point:
-
-```
-#-------------------------------------------------------------------------------
-# Deploy
-#-------------------------------------------------------------------------------
-set(RPICO_MOUNT_POINT "/media/igor/RPI-RP2/")
-```
-
 ## Test
 
 Use python script `test/test.py` to test the data transfer in both directions (USB <-> UART):
@@ -151,8 +142,36 @@ Info:
 - PICO an USB attached is in linux as "/dev/ttyACMx" detected.
 - FTDI RS232-USB adapter is in linux as "/dev/ttyUSBx" detected.
 
+## Known Issues
+
+**1. Time to configure UART**
+When opening the USB CDC port, the device needs some time (~5 ms) to apply the same settings (baud rate and line coding) to the UART interface. If the data is sent immediately (without delay) after opening the USB CDC port, the first byte may be lost. To work around this, there is a delay in the tests after the ports are opened:
+
+```
+...
+ser_tx = serial.Serial(DEVICE_NAME_TX, BAUDRATE)
+ser_rx = serial.Serial(DEVICE_NAME_RX, BAUDRATE, timeout=0)
+
+# Give time (~10ms) to pico to configure the UART interface
+time.sleep(0.01)
+...
+```
+
+**2. UART TX Interrupt not called for the first byte to send**
+
+According to RP2040 Datasheet, 4.2 UART -> 4.2.6 Interrupts -> 4.2.6.3. UARTTXINTR:
+
+> _The transmit interrupt is based on a transition through a level, rather than on the level itself. When the interrupt and
+the UART is enabled before any data is written to the transmit FIFO the interrupt is not set. The interrupt is only set,
+after written data leaves the single location of the transmit FIFO and it becomes empty._
+
+The Tx interrupt is generated after a byte is sent. We can't send the first byte directly from the interrupt—the interrupt isn't called. To work around this, the UART driver sends a dummy byte (0) after initialization to enable the TX interrupt.
+
 ## TODO
 
-- Bug: After reset or line coding change - the first byte is lost. Why is the first byte not sent?
-- Modify deploy cmake target to invoke a script and to jump to bootloader without UART-Ascii.
-- Implement flow control. Continuously monitor the fullness of the receive/send buffer.
+-Try to fix Known-Issue #2 without sending the dummy byte at init.
+-When UART settings changed, reinit all intern variables including ring buffers and pointers.
+-Add more tests: random directions (usb/uart), random data length packets.
+-Implement flow control: Continuously monitor the fullness of the receive/send buffer.
+-Check if we can use FIFO or DMA.
+-Get rid of pico UART libraries and implement as much as possible in driver.

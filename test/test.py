@@ -109,6 +109,9 @@ ser_tx = serial.Serial(DEVICE_NAME_TX, BAUDRATE)
 ser_rx = serial.Serial(DEVICE_NAME_RX, BAUDRATE, timeout=0)
 print(ser_tx.name, "-->", ser_rx.name)
 
+# Give time (~10ms) to pico to configure the UART interface
+time.sleep(0.01)
+
 for i in range(TEST_RANGE_FROM, TEST_RANGE_TO):
 
     # Calculate time required to send data:

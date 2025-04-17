@@ -60,7 +60,7 @@ pico_add_extra_outputs(rpico_cdc_uart)
 #-------------------------------------------------------------------------------
 # Deploy
 #-------------------------------------------------------------------------------
-set(RPICO_MOUNT_POINT "/media/igor/RPI-RP2/")
+set(RPICO_MOUNT_POINT "/media/$ENV{USER}/RPI-RP2/")
 add_custom_target(
     deploy
     COMMAND ${CMAKE_COMMAND} -E echo "Deploying to pico..."
