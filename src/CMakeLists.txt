@@ -19,6 +19,10 @@ add_compile_definitions(DEBUG_DUMP=uart_ascii_dump)         # function(buff, len
 # Debug/Logging: uncomment if a module has to debug
 add_compile_definitions(MAIN_DEBUG)
 add_compile_definitions(UART_DRV_DEBUG)
+add_compile_definitions(PUART_DRV_DEBUG)
+
+# Use PIO-UART instead of UART
+add_compile_definitions(USE_PIO_UART)
 
 # Extra features (uncomment the line to activate a feature):
 
@@ -30,14 +34,15 @@ add_compile_definitions(UART_RX_BYTES_TOUT=2)
 
 add_executable(rpico_cdc_uart)
 target_sources(rpico_cdc_uart PUBLIC
-    ${CMAKE_CURRENT_LIST_DIR}/main.c
-    ${CMAKE_CURRENT_LIST_DIR}/usb_descriptors.c
-    ${CMAKE_CURRENT_LIST_DIR}/usb_main.c
-    ${CMAKE_CURRENT_LIST_DIR}/gpio_drv.c
-    ${CMAKE_CURRENT_LIST_DIR}/uart_drv.c
-    ${CMAKE_CURRENT_LIST_DIR}/uart_ascii.c
-    ${CMAKE_CURRENT_LIST_DIR}/cli.c
-    ${CMAKE_CURRENT_LIST_DIR}/utils.c
+    main.c
+    usb_descriptors.c
+    usb_main.c
+    gpio_drv.c
+    uart_drv.c
+    uart_ascii.c
+    cli.c
+    utils.c
+    puart_drv.c
 )
 
 # Make sure TinyUSB can find tusb_config.h
@@ -52,8 +57,13 @@ target_link_libraries(rpico_cdc_uart PUBLIC
     tinyusb_device 
     tinyusb_board
     pico_multicore
-    hardware_uart 
+    hardware_uart
+    pico_stdlib 
+    hardware_pio
 )
+
+# by default the header is generated into the build dir
+pico_generate_pio_header(rpico_cdc_uart ${CMAKE_CURRENT_LIST_DIR}/puart_tx.pio)
 
 pico_add_extra_outputs(rpico_cdc_uart)
 

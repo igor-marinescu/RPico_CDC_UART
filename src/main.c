@@ -25,9 +25,11 @@
 #include "pico/stdlib.h"
 #include "pico/multicore.h"
 #include "gpio_drv.h"
-#include "uart_drv.h"
 #include "usb_main.h"
 #include "uart_ascii.h"
+
+#include "uart_drv.h"
+#include "puart_drv.h"
 
 #include "cli.h"
 #include "pico/bootrom.h"
@@ -264,7 +266,13 @@ int main(void)
     }
 
     gpio_drv_init();
+
+#ifdef USE_PIO_UART
+    puart_drv_init();
+#else
     uart_drv_init(&uart_line_coding);
+#endif
+
     uart_ascii_init();
 
     cli_init();
@@ -273,6 +281,12 @@ int main(void)
     cli_add_func("memdump", NULL,   cli_func_memdump,   "memdump <addr> <len>");
 
     MAIN_LOG(PROJECT_NAME " built: " __DATE__ " " __TIME__ "\r\n");
+
+#ifdef USE_PIO_UART
+    MAIN_LOG("UART mode: PIO\r\n");
+#else
+    MAIN_LOG("UART mode: device\r\n");
+#endif    
 
     multicore_launch_core1(usb_main);
 
@@ -307,7 +321,9 @@ int main(void)
                     usb_line_coding.parity);
 
             line_coding_usb_to_uart(&uart_line_coding, &usb_line_coding);
+#ifndef USE_PIO_UART
             uart_drv_init(&uart_line_coding);
+#endif
 
             #ifdef UART_RX_BYTES_TOUT
             uart_rx_tout_ustime = get_uart_ustime(&uart_line_coding, UART_RX_BYTES_TOUT);
@@ -362,7 +378,12 @@ int main(void)
         //----------------------------------------------------------------------
 
         // UART data received?
+#ifdef USE_PIO_UART
+        // Not yet implemented
+        uart_rx_cnt = 0UL;
+#else
         uart_rx_cnt = uart_drv_get_rx(uart_rx_data, sizeof(uart_rx_data));
+#endif
         if(uart_rx_cnt > 0UL)
         {
             // Check how much available space in usb_tx_data
@@ -388,7 +409,11 @@ int main(void)
         // UART data to send?
         if(uart_tx_cnt > 0UL)
         {
+#ifdef USE_PIO_UART
+            uint32_t sent = puart_drv_send_buff(uart_tx_data, uart_tx_cnt);
+#else
             uint32_t sent = uart_drv_send_buff(uart_tx_data, uart_tx_cnt);
+#endif
             if(sent < uart_tx_cnt)
             {
                 // Could not sent all data? Move the remaining UART tx buffer 
