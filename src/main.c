@@ -406,20 +406,25 @@ int main(void)
             uart_rx_ustime = sys_ustime;
         }
 
-        // UART data to send?
-        if(uart_tx_cnt > 0UL)
-        {
+           
+        // UART data to send? 
+        // To avoid calling memmove for every free byte (this is too expensive)
+        // send data to UART driver only if the tx buffer is >= 1/4 free
 #ifdef USE_PIO_UART
+        if((uart_tx_cnt > 0UL) && (puart_drv_get_tx_free_cnt() >= (PUART_TX_BUFF>>2))){
             uint32_t sent = puart_drv_send_buff(uart_tx_data, uart_tx_cnt);
 #else
+        if((uart_tx_cnt > 0UL) && (uart_drv_get_tx_free_cnt() >= (UART_TX_BUFF>>2))){
             uint32_t sent = uart_drv_send_buff(uart_tx_data, uart_tx_cnt);
 #endif
             if(sent < uart_tx_cnt)
             {
                 // Could not sent all data? Move the remaining UART tx buffer 
-                // to left to it send next time
+                // to left to send it next time
+                TP_SET(TP9);
                 memmove(&uart_tx_data[0], &uart_tx_data[sent],  uart_tx_cnt - sent);
                 uart_tx_cnt -= sent;
+                TP_CLR(TP9);
             }
             else uart_tx_cnt = 0UL;
         }

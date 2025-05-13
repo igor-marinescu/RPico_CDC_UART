@@ -65,6 +65,9 @@ void uart_drv_init(const uart_line_coding_t * ptr_line_coding);
 // Send buff to UART
 uint32_t uart_drv_send_buff(const uint8_t * buff, uint32_t len);
 
+// Get the free size of Tx buffer
+uint32_t uart_drv_get_tx_free_cnt(void);
+
 // Check if there are received characters and copy them to buffer
 uint32_t uart_drv_get_rx(char * buff, uint32_t buff_max_len);
 

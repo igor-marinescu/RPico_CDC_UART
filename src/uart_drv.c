@@ -64,6 +64,7 @@ void uart_drv_irq();
 static char tx_buffer[UART_TX_BUFF];
 static volatile uint32_t tx_wr_idx = 0UL;
 static volatile uint32_t tx_rd_idx = 0UL;
+static volatile uint32_t tx_free_cnt = sizeof(tx_buffer);
 static volatile bool send_semaphore = false;
 
 static char rx_buffer[UART_RX_BUFF];
@@ -156,10 +157,33 @@ static inline void _check_wr_jumps_over_rd(void)
 }
 
 /*******************************************************************************
+ * @brief Get the count of available (free) bytes in Tx buffer
+ * @return count of free bytes in Tx buffer
+ ******************************************************************************/
+static inline uint32_t get_tx_buff_free_cnt(void)
+{
+    // |<------ free ----->|<--- busy for send --->|<------ free ----->|
+    // |---- available ----|XXXXXXXXXXXXXXXXXXXXXXX|---- available ----|
+    // 0                tx_rd_idx              tx_wr_idx       sizeof(tx_buffer)
+    if(tx_wr_idx > tx_rd_idx)
+        return (sizeof(tx_buffer) - tx_wr_idx + tx_rd_idx);
+
+        // |<-- busy for send -->|<------ free ----->|<-- busy for send -->|
+    // |XXXXXXXXXXXXXXXXXXXXX|---- available ----|XXXXXXXXXXXXXXXXXXXXX|
+    // 0                tx_wr_idx              tx_rd_idx       sizeof(tx_buffer)
+    else if(tx_wr_idx < tx_rd_idx)
+        return (tx_rd_idx - tx_wr_idx);    
+
+        return sizeof(tx_buffer);
+}
+
+/*******************************************************************************
  * @brief UART interrupt handler
  ******************************************************************************/
 void uart_drv_irq()
 {
+    TP_TGL(TP7);
+
     rx_wr_old = rx_wr_idx;
 
     // In case we have some data collected in rx backup buffer (rx_buff0), 
@@ -219,6 +243,9 @@ void uart_drv_irq()
         // Nothing to send?
         else if(tx_wr_idx == tx_rd_idx)
         {
+            // Tx Buffer is empty
+            tx_free_cnt = sizeof(tx_buffer);
+            TP_TGL(TP8);
             // Disable tx irq
             uart_set_irq_enables(UART_ID, true, false);
             break;
@@ -227,9 +254,9 @@ void uart_drv_irq()
         else{
             uart_get_hw(UART_ID)->dr = (uint8_t) tx_buffer[tx_rd_idx++];
             if(tx_rd_idx >= sizeof(tx_buffer))
-            {
                 tx_rd_idx = 0UL;
-            }
+            // Update Tx Buffer free count
+            tx_free_cnt = get_tx_buff_free_cnt();
             TP_TGL(TP5);
         }
     }
@@ -307,12 +334,26 @@ uint32_t uart_drv_send_buff(const uint8_t * buff, uint32_t len)
         //UART_DRV_LOG(">2%4i | w%4i r%4i\r\n", available, tx_wr_idx, tx_rd_idx);
     }
 
+    // Update Tx Buffer free count
+    tx_free_cnt = get_tx_buff_free_cnt();
+
     send_semaphore = false;
+
+    TP_TGL(TP6);
 
     // Reactivate IRQ (if not already active)
     uart_set_irq_enables(UART_ID, true, true);
 
     return copied;
+}
+
+/*******************************************************************************
+ * @brief Get the free size of Tx buffer
+ * @return count of bytes still free in Tx buffer
+ ******************************************************************************/
+uint32_t uart_drv_get_tx_free_cnt(void)
+{
+    return tx_free_cnt;
 }
 
 /*******************************************************************************
@@ -407,3 +448,4 @@ uint32_t uart_drv_get_rx(char * buff, uint32_t buff_max_len)
     }
     return buff_idx;
 }
+
