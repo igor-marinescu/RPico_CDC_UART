@@ -22,7 +22,12 @@ add_compile_definitions(UART_DRV_DEBUG)
 add_compile_definitions(PUART_DRV_DEBUG)
 
 # Use PIO-UART instead of UART
-add_compile_definitions(USE_PIO_UART)
+#add_compile_definitions(USE_PIO_UART)
+#add_compile_definitions(PIO_TX_BIT_CNT=10)
+
+# TX-ACTIVE Output Signal
+add_compile_definitions(TX_ACTIVE_ENABLED)
+
 
 # Extra features (uncomment the line to activate a feature):
 

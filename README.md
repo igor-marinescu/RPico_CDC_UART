@@ -167,11 +167,25 @@ after written data leaves the single location of the transmit FIFO and it become
 
 The Tx interrupt is generated after a byte is sent. We can't send the first byte directly from the interrupt—the interrupt isn't called. To work around this, the UART driver sends a dummy byte (0) after initialization to enable the TX interrupt.
 
+## Notes
+
+__Implement TX_ACTIVE Signal__
+
+Set a GPIO as Output and set it (to active High or Low) while transmitting data.
+This allows using UART together with RS-485 transceivers (for example with THVD1429).
+
+Set the TX_ACTIVE before writing the first data to the shift register and reset it after UART has finishing sending the last data (together with the stop-bit).
+
+How to detect when UART has finished sending the stop-bit of the last data:
+
+- In case of the UART: check UARTFR (Flag Register) bit BUSY (3).
+- In case of PIO-UART: check SMx_EXECCTRL (Execution/behavioural settings for state machine x) bit EXEC_STALLED (31). EXEC_STALLED (RO) - If 1, an instruction written to SMx_INSTR is stalled, and latched by the state machine. Will clear to 0 once this instruction completes.
+
 ## TODO
 
--Try to fix Known-Issue #2 without sending the dummy byte at init.
--When UART settings changed, reinit all intern variables including ring buffers and pointers.
--Add more tests: random directions (usb/uart), random data length packets.
--Implement flow control: Continuously monitor the fullness of the receive/send buffer.
--Check if we can use FIFO or DMA.
--Get rid of pico UART libraries and implement as much as possible in driver.
+- Try to fix Known-Issue #2 without sending the dummy byte at init.
+- When UART settings changed, reinit all intern variables including ring buffers and pointers.
+- Add more tests: random directions (usb/uart), random data length packets.
+- Implement flow control: Continuously monitor the fullness of the receive/send buffer.
+- Check if we can use FIFO or DMA.
+- Get rid of pico UART libraries and implement as much as possible in driver.

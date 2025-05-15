@@ -78,6 +78,7 @@ static volatile uint32_t rx_idx0 = 0UL;
 static volatile bool rx_buff0_semaphore = false;
 
 static uart_line_coding_t line_coding;
+static int tx_active_status = 0;
 
 /*******************************************************************************
  * @brief UART Init function
@@ -273,6 +274,12 @@ uint32_t uart_drv_send_buff(const uint8_t * buff, uint32_t len)
     if((buff == NULL) || (len == 0UL))
         return 0UL;
 
+    // TX-ACTIVE Signal Control
+    #ifdef TX_ACTIVE_ENABLED
+        tx_active_status = 1;
+        TP_SET(TP6);
+    #endif
+
     send_semaphore = true;
 
     if(tx_wr_idx >= sizeof(tx_buffer))
@@ -339,8 +346,6 @@ uint32_t uart_drv_send_buff(const uint8_t * buff, uint32_t len)
 
     send_semaphore = false;
 
-    TP_TGL(TP6);
-
     // Reactivate IRQ (if not already active)
     uart_set_irq_enables(UART_ID, true, true);
 
@@ -354,6 +359,22 @@ uint32_t uart_drv_send_buff(const uint8_t * buff, uint32_t len)
 uint32_t uart_drv_get_tx_free_cnt(void)
 {
     return tx_free_cnt;
+}
+
+/*******************************************************************************
+ * @brief Check if UART has finished transmiting data and reset TX_ACTIVE signal.
+ ******************************************************************************/
+void uart_drv_control_tx_active(void)
+{
+    if(tx_active_status)
+    {
+        // If nothing more to send and UART is not busy (check UARTFR bit BUSY)
+        if((tx_wr_idx == tx_rd_idx) && ((uart_get_hw(UART_ID)->fr & 0x00000008) == 0))
+        {
+            tx_active_status = 0;
+            TP_CLR(TP6);
+        }
+    }
 }
 
 /*******************************************************************************
@@ -448,4 +469,3 @@ uint32_t uart_drv_get_rx(char * buff, uint32_t buff_max_len)
     }
     return buff_idx;
 }
-

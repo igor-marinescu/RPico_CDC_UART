@@ -61,6 +61,5 @@ uint32_t puart_drv_get_tx_free_cnt(void);
 // Check if there are received characters and copy them to buffer
 uint32_t puart_drv_get_rx(char * buff, uint32_t buff_max_len);
 
-
 //******************************************************************************
 #endif /* PUART_DRV_H */

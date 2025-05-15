@@ -429,6 +429,13 @@ int main(void)
             else uart_tx_cnt = 0UL;
         }
 
+#ifdef TX_ACTIVE_ENABLED
+    #ifdef USE_PIO_UART
+        puart_drv_control_tx_active();
+    #else
+        uart_drv_control_tx_active();
+    #endif
+#endif
         cli_poll();
     }
 }
