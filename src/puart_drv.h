@@ -58,6 +58,9 @@ uint32_t puart_drv_send_buff(const uint8_t * buff, uint32_t len);
 // Get the free size of Tx buffer
 uint32_t puart_drv_get_tx_free_cnt(void);
 
+// Check if PIO-UART has finished transmiting data and reset TX_ACTIVE signal
+void puart_drv_control_tx_active(void);
+
 // Check if there are received characters and copy them to buffer
 uint32_t puart_drv_get_rx(char * buff, uint32_t buff_max_len);
 

@@ -88,6 +88,8 @@ static pio_interrupt_source_t pio_irq_src_txnfull;
 static uint irq_idx_txnfull;
 static int8_t pio_irq_txnfull;
 
+static int tx_active_status = 0;
+
 // Tx Not-Full Interrupt Disable/Enable Macros
 #define PIO_IRQ_TXNFULL_DISABLE()   pio_set_irqn_source_enabled(pio, irq_idx_txnfull, pio_irq_src_txnfull, false)
 #define PIO_IRQ_TXNFULL_ENABLE()    pio_set_irqn_source_enabled(pio, irq_idx_txnfull, pio_irq_src_txnfull, true)
@@ -285,6 +287,12 @@ uint32_t puart_drv_send_buff(const uint8_t * buff, uint32_t len)
     if((buff == NULL) || (len == 0UL))
         return 0UL;
 
+    // TX-ACTIVE Signal Control
+    #ifdef TX_ACTIVE_ENABLED
+        tx_active_status = 1;
+        TP_SET(TP6);
+    #endif
+
     send_semaphore = true;
 
     if(tx_wr_idx >= sizeof(tx_buffer))
@@ -351,8 +359,6 @@ uint32_t puart_drv_send_buff(const uint8_t * buff, uint32_t len)
 
     send_semaphore = false;
 
-    TP_TGL(TP6);
-
     // Reactivate IRQ (if not already active)
     PIO_IRQ_TXNFULL_ENABLE();
 
@@ -366,6 +372,28 @@ uint32_t puart_drv_send_buff(const uint8_t * buff, uint32_t len)
 uint32_t puart_drv_get_tx_free_cnt(void)
 {
     return tx_free_cnt;
+}
+
+/*******************************************************************************
+ * @brief Check if PIO-UART has finished transmiting data and reset TX_ACTIVE signal
+ ******************************************************************************/
+void puart_drv_control_tx_active(void)
+{
+    if(tx_active_status)
+    {
+
+        // If nothing more to send and PIO-UART SM is not busy
+        // (Check EXEC_STALLED (RO) - If 1, an instruction written to SMx_INSTR is stalled)
+        if(tx_wr_idx == tx_rd_idx) 
+        {
+            if(pio_sm_is_exec_stalled(pio, sm))
+            {
+                PUART_DRV_LOG("3\r\n");
+                tx_active_status = 0;
+                TP_CLR(TP6);
+            }
+        }
+    }
 }
 
 /*******************************************************************************

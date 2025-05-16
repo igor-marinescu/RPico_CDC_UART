@@ -362,14 +362,14 @@ uint32_t uart_drv_get_tx_free_cnt(void)
 }
 
 /*******************************************************************************
- * @brief Check if UART has finished transmiting data and reset TX_ACTIVE signal.
+ * @brief Check if UART has finished transmiting data and reset TX_ACTIVE signal
  ******************************************************************************/
 void uart_drv_control_tx_active(void)
 {
     if(tx_active_status)
     {
         // If nothing more to send and UART is not busy (check UARTFR bit BUSY)
-        if((tx_wr_idx == tx_rd_idx) && ((uart_get_hw(UART_ID)->fr & 0x00000008) == 0))
+        if((tx_wr_idx == tx_rd_idx) && ((uart_get_hw(UART_ID)->fr & UART_UARTFR_BUSY_BITS) == 0))
         {
             tx_active_status = 0;
             TP_CLR(TP6);
