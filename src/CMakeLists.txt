@@ -23,7 +23,8 @@ add_compile_definitions(PUART_DRV_DEBUG)
 
 # Use PIO-UART instead of UART
 add_compile_definitions(USE_PIO_UART)
-#add_compile_definitions(PIO_TX_BIT_CNT=10)
+add_compile_definitions(PIO_BAUDRATE=115200)
+add_compile_definitions(PIO_DATA_BIT=8)
 
 # TX-ACTIVE Output Signal
 add_compile_definitions(TX_ACTIVE_ENABLED)
@@ -45,6 +46,7 @@ target_sources(rpico_cdc_uart PUBLIC
     cli.c
     utils.c
     puart_drv.c
+    ustime.c
 )
 
 # Make sure TinyUSB can find tusb_config.h

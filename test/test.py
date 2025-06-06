@@ -70,6 +70,8 @@ parser.add_argument('-f', '--from', default=TEST_RANGE_FROM, type=int, dest='fro
             help='Test range from (default: %(default)s)')
 parser.add_argument('-t', '--to', default=TEST_RANGE_TO, type=int, dest='to_value',
             help='Test range to (default: %(default)s)')
+parser.add_argument('-n', '--no-check', default=0, type=int, dest='no_check',
+            help='Do not check the result (default: %(default)s)')
 
 args = parser.parse_args()
 
@@ -135,17 +137,21 @@ for i in range(TEST_RANGE_FROM, TEST_RANGE_TO):
     #if i == 30:
     #    test_data[10] = 0
 
-    if (len(rx_bytes) == i) and (rx_bytes == test_data):
-        #sys.stdout.write('{} {:5d} ({:02X}): Ok \r'.format(TEST_PREFIX, i, i))
-        #sys.stdout.flush()
-        print('{} {:5d} ({:02X}): Ok'.format(TEST_PREFIX, i, i))
+    if args.no_check == 0:
+
+        if (len(rx_bytes) == i) and (rx_bytes == test_data):
+            #sys.stdout.write('{} {:5d} ({:02X}): Ok \r'.format(TEST_PREFIX, i, i))
+            #sys.stdout.flush()
+            print('{} {:5d} ({:02X}): Ok'.format(TEST_PREFIX, i, i))
+        else:
+            print('{} {:5d} ({:02X}): Failed'.format(TEST_PREFIX, i, i))
+            print('Sent {:d} bytes:'.format(len(test_data)))
+            hex_dump(test_data)
+            print('Received {:d} bytes:'.format(len(rx_bytes)))
+            hex_dump(rx_bytes)
+            break
     else:
-        print('{} {:5d} ({:02X}): Failed'.format(TEST_PREFIX, i, i))
-        print('Sent {:d} bytes:'.format(len(test_data)))
-        hex_dump(test_data)
-        print('Received {:d} bytes:'.format(len(rx_bytes)))
-        hex_dump(rx_bytes)
-        break
+            print('{} {:5d} ({:02X}): (no check)'.format(TEST_PREFIX, i, i))
 
 ser_tx.close()
 ser_rx.close()

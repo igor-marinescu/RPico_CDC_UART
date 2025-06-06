@@ -246,7 +246,7 @@ void uart_drv_irq()
         {
             // Tx Buffer is empty
             tx_free_cnt = sizeof(tx_buffer);
-            TP_TGL(TP8);
+            //TP_TGL(TP8);
             // Disable tx irq
             uart_set_irq_enables(UART_ID, true, false);
             break;
@@ -277,7 +277,7 @@ uint32_t uart_drv_send_buff(const uint8_t * buff, uint32_t len)
     // TX-ACTIVE Signal Control
     #ifdef TX_ACTIVE_ENABLED
         tx_active_status = 1;
-        TP_SET(TP6);
+        UART_TX_ACTIVE_SIGNAL_SET();
     #endif
 
     send_semaphore = true;
@@ -369,10 +369,11 @@ void uart_drv_control_tx_active(void)
     if(tx_active_status)
     {
         // If nothing more to send and UART is not busy (check UARTFR bit BUSY)
-        if((tx_wr_idx == tx_rd_idx) && ((uart_get_hw(UART_ID)->fr & UART_UARTFR_BUSY_BITS) == 0))
+        if((tx_wr_idx == tx_rd_idx) 
+        && ((uart_get_hw(UART_ID)->fr & UART_UARTFR_BUSY_BITS) == 0))
         {
             tx_active_status = 0;
-            TP_CLR(TP6);
+            UART_TX_ACTIVE_SIGNAL_CLR();
         }
     }
 }

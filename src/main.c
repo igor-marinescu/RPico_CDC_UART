@@ -34,6 +34,8 @@
 #include "cli.h"
 #include "pico/bootrom.h"
 
+#include "ustime.h"
+
 #ifdef MAIN_DEBUG
 #include DEBUG_INCLUDE
 #endif
@@ -195,32 +197,6 @@ static void line_coding_usb_to_uart(uart_line_coding_t * ptr_uart_lc, const cdc_
 }
 
 /*******************************************************************************
- * @brief Get System Time in us
- *        Warning! This is not safe in case of multi-core
- * @return System Time in us
- ******************************************************************************/
-ustime_t get_sys_ustime(void)
-{
-    uint32_t lr = timer_hw->timelr;
-    timer_hw->timehr;
-    return (ustime_t) lr;
-}
-
-/*******************************************************************************
- * @brief Get the difference (always positive) between two ustime_t variables
- * @param end_ustime [in] end ustime_t variable
- * @param start_ustime [in] start ustime_t variable
- * @return difference: end_ustime - start_ustime
- ******************************************************************************/
-ustime_t get_diff_ustime(const ustime_t end_ustime, const ustime_t start_ustime)
-{
-    int32_t diff = ((int32_t) end_ustime) - ((int32_t) start_ustime);
-    if(diff < 0)
-        return (ustime_t)(-diff);
-    return (ustime_t)(diff);
-}
-
-/*******************************************************************************
  * @brief Calculate time necessary to send/receive a number of bytes over UART
  *        (depending on UART line coding)
  * 
@@ -238,16 +214,10 @@ ustime_t get_diff_ustime(const ustime_t end_ustime, const ustime_t start_ustime)
 *******************************************************************************/
 ustime_t get_uart_ustime(const uart_line_coding_t * ptr_uart_lc, const uint32_t bytes_cnt)
 {
-    if(!ptr_uart_lc || (ptr_uart_lc->bit_rate == 0))
-        return 0;
-
-    uint32_t val = 1;
-    val += (uint32_t) ptr_uart_lc->data_bits;
-    val += (uint32_t) ptr_uart_lc->stop_bits;
-    val *= bytes_cnt;
-    val *= 1000000;
-
-    return (ustime_t)(val / (uint32_t) ptr_uart_lc->bit_rate);
+    return get_baudrate_transfer_ustime(
+        ptr_uart_lc->bit_rate, 
+        (1 + ptr_uart_lc->data_bits + ptr_uart_lc->stop_bits), 
+        bytes_cnt);
 }
 
 /*******************************************************************************

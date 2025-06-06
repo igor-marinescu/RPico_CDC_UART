@@ -15,57 +15,47 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  ******************************************************************************/
 /*******************************************************************************
- * puart_drv - the PIO-UART communication driver (implemented in non-blocking mode,
- * not multi-thread safe)
+ * ustime - calculates the difference between two ustime_t/s_time_t data.
  ******************************************************************************/
-#ifndef PUART_DRV_H
-#define PUART_DRV_H
+#ifndef USTIME_H
+#define USTIME_H
 
 //******************************************************************************
 // Includes
 //******************************************************************************
 
-#ifdef PUART_DRV_DEBUG
-#include DEBUG_INCLUDE
-#endif
-
 //******************************************************************************
 // Defines
 //******************************************************************************
-#define PUART_TX_PIN     0
-#define PUART_RX_PIN     1
 
-#define PUART_IRQ_PRIO   PICO_DEFAULT_IRQ_PRIORITY
-#define PUART_TX_BUFF    256
-#define PUART_RX_BUFF    256
+//******************************************************************************
+// Typedefs
+//******************************************************************************
 
-#ifdef PUART_DRV_DEBUG
-    #define PUART_DRV_LOG(...)   DEBUG_PRINTF(__VA_ARGS__)
-#else
-    #define PUART_DRV_LOG(...)    
-#endif  
+// System time in micro-seconds
+typedef uint32_t ustime_t;
 
-#define PUART_TX_ACTIVE_SIGNAL_SET()    TP_SET(TP6)
-#define PUART_TX_ACTIVE_SIGNAL_CLR()    TP_CLR(TP6)
+// System time in seconds
+typedef uint32_t s_time_t;
 
 //******************************************************************************
 // Exported Functions
 //******************************************************************************
 
-// UART Init function
-void puart_drv_init(void);
+// Get System Time in us (32 bit)
+ustime_t get_sys_ustime(void);
 
-// Send buff to UART
-uint32_t puart_drv_send_buff(const uint8_t * buff, uint32_t len);
+// Get the difference (always positive) between ustime_t variable and system time
+ustime_t get_diff_sys_ustime(const ustime_t ustime);
 
-// Get the free size of Tx buffer
-uint32_t puart_drv_get_tx_free_cnt(void);
+// Get the difference (always positive) between two ustime_t variables
+ustime_t get_diff_ustime(const ustime_t end_time, const ustime_t start_time);
 
-// Check if PIO-UART has finished transmiting data and reset TX_ACTIVE signal
-void puart_drv_control_tx_active(void);
+// Get the difference (always positive) between two s_time_t variables
+s_time_t get_diff_s_time(const s_time_t end_time, const s_time_t start_time);
 
-// Check if there are received characters and copy them to buffer
-uint32_t puart_drv_get_rx(char * buff, uint32_t buff_max_len);
+// Calculate time necessary to transfer a number of bytes over a serial interface
+ustime_t get_baudrate_transfer_ustime(unsigned int baudrate, unsigned int bits_pro_byte, unsigned int bytes_cnt);
 
 //******************************************************************************
-#endif /* PUART_DRV_H */
+#endif /* USTIME_H */

@@ -32,8 +32,10 @@
 #include "hardware/irq.h"
 #include "puart_drv.h"
 #include "gpio_drv.h"
+#include "ustime.h"
 
 #include "puart_tx.pio.h"
+
 
 #include "uart_ascii.h" //!!! TODO: delete
 
@@ -89,6 +91,9 @@ static uint irq_idx_txnfull;
 static int8_t pio_irq_txnfull;
 
 static int tx_active_status = 0;
+static ustime_t tx_last_byte_ustime;
+
+static ustime_t byte_req_ustime;
 
 // Tx Not-Full Interrupt Disable/Enable Macros
 #define PIO_IRQ_TXNFULL_DISABLE()   pio_set_irqn_source_enabled(pio, irq_idx_txnfull, pio_irq_src_txnfull, false)
@@ -99,14 +104,16 @@ static int tx_active_status = 0;
  ******************************************************************************/
 void puart_drv_init(void)
 {
-    const uint SERIAL_BAUD = 115200;
-
     pio = pio0;
     sm = 0;
 
     uint offset = pio_add_program(pio, &puart_tx_program);
-    puart_tx_program_init(pio, sm, offset, PUART_TX_PIN, SERIAL_BAUD);
+    puart_tx_program_init(pio, sm, offset, PUART_TX_PIN, PIO_BAUDRATE);
+    pio->txf[sm] = (PIO_DATA_BIT - 1);
     PUART_DRV_LOG("PUART drv init\r\n");
+
+    // Calculate time necessary to transfer a byte (1 start + PIO_DATA_BIT + 1 stop + 1 reserve)
+    byte_req_ustime = get_baudrate_transfer_ustime(PIO_BAUDRATE, (1 + PIO_DATA_BIT + 1 + 1), 1);
 
     // Configure TX Fifo not full interrupt
 
@@ -259,7 +266,9 @@ static void puart_drv_irq(void)
         // Nothing to send?
         else if(tx_wr_idx == tx_rd_idx)
         {
-            TP_TGL(TP8);
+            // Tx Buffer is empty
+            tx_free_cnt = sizeof(tx_buffer);
+            //TP_TGL(TP8);
             // Disable tx irq
             PIO_IRQ_TXNFULL_DISABLE();
             break;
@@ -290,7 +299,7 @@ uint32_t puart_drv_send_buff(const uint8_t * buff, uint32_t len)
     // TX-ACTIVE Signal Control
     #ifdef TX_ACTIVE_ENABLED
         tx_active_status = 1;
-        TP_SET(TP6);
+        PUART_TX_ACTIVE_SIGNAL_SET();
     #endif
 
     send_semaphore = true;
@@ -381,16 +390,27 @@ void puart_drv_control_tx_active(void)
 {
     if(tx_active_status)
     {
-
-        // If nothing more to send and PIO-UART SM is not busy
-        // (Check EXEC_STALLED (RO) - If 1, an instruction written to SMx_INSTR is stalled)
+        // If nothing more to send
         if(tx_wr_idx == tx_rd_idx) 
         {
-            if(pio_sm_is_exec_stalled(pio, sm))
+            if(tx_active_status == 1)
             {
-                PUART_DRV_LOG("3\r\n");
-                tx_active_status = 0;
-                TP_CLR(TP6);
+                // Check if TX-FIFO is empty
+                if((pio->flevel & PIO_FLEVEL_TX0_BITS) == 0)
+                {
+                    // Goto status 2 where we wait for the last byte to be sent
+                    tx_active_status = 2;
+                    tx_last_byte_ustime = get_sys_ustime();
+                    TP_TGL(TP8);
+                }
+            }
+            else {
+                // Check if last byte was sent (time elapsed requited to send one byte)
+                if(get_diff_sys_ustime(tx_last_byte_ustime) >= byte_req_ustime)
+                {
+                    tx_active_status = 0;
+                    PUART_TX_ACTIVE_SIGNAL_CLR();
+                }
             }
         }
     }
