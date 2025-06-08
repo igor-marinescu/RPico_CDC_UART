@@ -73,13 +73,25 @@ make
 
 ## Deploy
 
-If the Raspberry Pi Pico has not yet been updated with `rpico_cdc_uart.uf2` (this is the first time the device is updated with this firmware): 
-Follow the standard steps to update the device: unplug from USB, press BOOTSEL, plug in the USB, release BOOTSEL, and copy the firmware to the mounted RPI-RP2 folder.
+### First deploy
 
-If the Raspberry Pi Pico has already been updated with `rpico_cdc_uart.uf2`:
-Use `make deploy` command to automatically invoke the bootloader and copy the file to the mounted location:
+If the Raspberry Pi Pico has not yet been updated with `rpico_cdc_uart.uf2` (this is the first time the device is updated with this firmware): follow the standard steps to update the device: unplug from USB, press BOOTSEL, plug in the USB, release BOOTSEL, and copy the firmware to the mounted RPI-RP2 folder.
+
+__Auto-mount Raspberry Pi Pico on Linux in CLI:__
+
+- Create `/media/igor/RPI-RP2` mount point, execute: `sudo mkdir /media/igor/RPI-RP2`
+- Edit fstab (`sudo nano /etc/fstab`) and add the following line:
 
 ```
+LABEL="RPI-RP2" /media/igor/RPI-RP2 vfat defaults,nofail 0 0
+```
+
+### make deploy
+
+If the Raspberry Pi Pico has already been updated with `rpico_cdc_uart.uf2`:
+use `make deploy` command to automatically invoke the bootloader and copy the file to the mounted location:
+
+```bash
 $ make deploy
 [  1%] Built target bs2_default
 [  4%] Built target bs2_default_library
@@ -95,7 +107,13 @@ Done
 [100%] Built target deploy
 ```
 
-The script `scripts/firmware_update.py` checks if Raspberry Pi Pico not yet mounted, and sends a dummy byte at /dev/ttyACM0 uisng 1200 bps as baudrate. This reboots the board in bootlaoder mode. After this, the scripts copies the new firmware `rpico_cdc_uart.uf2` to the mounted location.
+The `scripts/firmware_update.py` script checks if Raspberry Pi Pico not yet mounted, and sends a dummy byte at /dev/ttyACM0 uisng 1200 bps as baudrate. This reboots the board in bootlaoder mode. After this, the scripts copies the new firmware `rpico_cdc_uart.uf2` to the mounted location.
+
+Note: the `scripts/firmware_update.py` script requires `python3-serial` module:
+
+```bash
+sudo apt-get install python3-serial
+```
 
 ## Test
 
