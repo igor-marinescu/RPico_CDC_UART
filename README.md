@@ -50,10 +50,10 @@ https://www.raspberrypi.com/documentation/microcontrollers/c_sdk.html
 
 Clone code to `~/pico_dev/`.
 
-Export `pico-sdk` path, example when `pico-sdk` located at `/home/igor/pico/pico-sdk`:
+Export `pico-sdk` path, example:
 
 ```bash
-export PICO_SDK_PATH=/home/igor/pico/pico-sdk
+export PICO_SDK_PATH=~/pico/pico-sdk
 ```
     
 Create build directory in `~/pico_dev/RPico_CDC_UART/build`:
@@ -73,46 +73,73 @@ make
 
 ## Deploy
 
-### First deploy
+### Prerequisites: picotool
 
-If the Raspberry Pi Pico has not yet been updated with `rpico_cdc_uart.uf2` (this is the first time the device is updated with this firmware): follow the standard steps to update the device: unplug from USB, press BOOTSEL, plug in the USB, release BOOTSEL, and copy the firmware to the mounted RPI-RP2 folder.
+The following steps describe the installation process of Picotool – a tool for interacting with Raspberry Pi Pico devices when they are in BOOTSEL mode (for example: firmware update).
 
-__Auto-mount Raspberry Pi Pico on Linux in CLI:__
+__Getting picotool:__
 
-- Create `/media/igor/RPI-RP2` mount point, execute: `sudo mkdir /media/igor/RPI-RP2`
-- Edit fstab (`sudo nano /etc/fstab`) and add the following line:
-
+```bash
+cd ~/pico/
+git clone https://github.com/raspberrypi/picotool.git --branch master
+cd picotool
 ```
-LABEL="RPI-RP2" /media/igor/RPI-RP2 vfat defaults,nofail 0 0
+
+Install required libusb library:
+
+```bash
+sudo apt install libusb-1.0-0-dev
 ```
 
-### make deploy
+__Building picotool:__
 
-If the Raspberry Pi Pico has already been updated with `rpico_cdc_uart.uf2`:
-use `make deploy` command to automatically invoke the bootloader and copy the file to the mounted location:
+```bash
+mkdir build
+cd build
+export PICO_SDK_PATH=~/pico/pico-sdk
+cmake ../
+make
+```
+
+__Install picotool:__
+
+```bash
+cmake -DCMAKE_INSTALL_PREFIX=~/.local ..
+make install
+```
+
+### Deploy firmware to Raspberry Pi Pico
+
+If the Raspberry Pi Pico has not yet been updated with `rpico_cdc_uart.uf2` (this is the first time the device is updated with this firmware), manually put the Raspberry Pi Pico into boot mode: unplug from USB, press BOOTSEL, plug in the USB, release BOOTSEL.
+
+If the Raspberry Pi Pico has already been updated with `rpico_cdc_uart.uf2`, the above step is not required. The `scripts/firmware_update.py` script checks if there is "TinyUSB" device connected, and sends a dummy byte at /dev/ttyACM0 uisng 1200 bps as baudrate. This reboots the device into boot mode.
+
+Use `make deploy` command to load the firmware into the Raspberry Pi Pico:
 
 ```bash
 $ make deploy
 [  1%] Built target bs2_default
 [  4%] Built target bs2_default_library
+[  5%] Performing build step for 'pioasmBuild'
+[100%] Built target pioasm
+[  5%] Performing install step for 'pioasmBuild'
+[100%] Built target pioasm
+Install the project...
+-- Install configuration: "Release"
+[  6%] Completed 'pioasmBuild'
+[ 11%] Built target pioasmBuild
+[ 12%] Built target rpico_cdc_uart_puart_tx_pio_h
 [ 98%] Built target rpico_cdc_uart
 [100%] Deploying the firmware to pico
 Deploying to pico...
-Check if device mounted /media/igor/RPI-RP2/
-Device not yet mounted /media/igor/RPI-RP2/
-Trying to jump to boot using /dev/ttyACM0
-Device mounted /media/igor/RPI-RP2/
-Copy rpico_cdc_uart.uf2 --> /media/igor/RPI-RP2/
-Done
+TinyUSB Device found. Try to jump to Boot.
+Bus 001 Device 012: ID 2e8a:0003 Raspberry Pi RP2 Boot
+Raspberry Pi RP2 Boot found.
+Update device with firmware: rpico_cdc_uart.uf2
+Loading into Flash:   [==============================]  100%
+Success, reboot device.
+The device was rebooted into application mode.
 [100%] Built target deploy
-```
-
-The `scripts/firmware_update.py` script checks if Raspberry Pi Pico not yet mounted, and sends a dummy byte at /dev/ttyACM0 uisng 1200 bps as baudrate. This reboots the board in bootlaoder mode. After this, the scripts copies the new firmware `rpico_cdc_uart.uf2` to the mounted location.
-
-Note: the `scripts/firmware_update.py` script requires `python3-serial` module:
-
-```bash
-sudo apt-get install python3-serial
 ```
 
 ## Test
@@ -179,9 +206,7 @@ time.sleep(0.01)
 
 According to RP2040 Datasheet, 4.2 UART -> 4.2.6 Interrupts -> 4.2.6.3. UARTTXINTR:
 
-> _The transmit interrupt is based on a transition through a level, rather than on the level itself. When the interrupt and
-the UART is enabled before any data is written to the transmit FIFO the interrupt is not set. The interrupt is only set,
-after written data leaves the single location of the transmit FIFO and it becomes empty._
+> _The transmit interrupt is based on a transition through a level, rather than on the level itself. When the interrupt and the UART is enabled before any data is written to the transmit FIFO the interrupt is not set. The interrupt is only set, after written data leaves the single location of the transmit FIFO and it becomes empty._
 
 The Tx interrupt is generated after a byte is sent. We can't send the first byte directly from the interrupt—the interrupt isn't called. To work around this, the UART driver sends a dummy byte (0) after initialization to enable the TX interrupt.
 

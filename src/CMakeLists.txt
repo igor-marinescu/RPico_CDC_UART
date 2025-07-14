@@ -74,12 +74,13 @@ pico_add_extra_outputs(rpico_cdc_uart)
 #-------------------------------------------------------------------------------
 # Deploy
 #-------------------------------------------------------------------------------
-set(RPICO_MOUNT_POINT "/media/$ENV{USER}/RPI-RP2/")
+#set(RPICO_MOUNT_POINT "/media/$ENV{USER}/RPI-RP2/")
 add_custom_target(
     deploy
     COMMAND ${CMAKE_COMMAND} -E echo "Deploying to pico..."
     #COMMAND cp "${PROJECT_NAME}.uf2" /media/igor/RPI-RP2/
-    COMMAND python3 ../scripts/firmware_update.py -m "${RPICO_MOUNT_POINT}" "${PROJECT_NAME}.uf2"
+    #COMMAND python3 ../scripts/firmware_update.py -m "${RPICO_MOUNT_POINT}" "${PROJECT_NAME}.uf2"
+    COMMAND ../scripts/firmware_update.sh "${PROJECT_NAME}.uf2"
     DEPENDS rpico_cdc_uart
     COMMENT "Deploying the firmware to pico"
 )
