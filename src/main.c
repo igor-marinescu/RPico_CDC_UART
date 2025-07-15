@@ -349,8 +349,7 @@ int main(void)
 
         // UART data received?
 #ifdef USE_PIO_UART
-        // Not yet implemented
-        uart_rx_cnt = 0UL;
+        uart_rx_cnt = puart_drv_get_rx(uart_rx_data, sizeof(uart_rx_data));
 #else
         uart_rx_cnt = uart_drv_get_rx(uart_rx_data, sizeof(uart_rx_data));
 #endif

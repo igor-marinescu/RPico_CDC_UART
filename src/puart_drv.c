@@ -35,14 +35,15 @@
 #include "ustime.h"
 
 #include "puart_tx.pio.h"
-
+#include "puart_rx.pio.h"
 
 #include "uart_ascii.h" //!!! TODO: delete
 
 //******************************************************************************
 // Function Prototypes
 //******************************************************************************
-static void puart_drv_irq(void);
+static void irq_txnfull_func(void);
+static void irq_rx_func(void);
 
 //******************************************************************************
 // Global Variables
@@ -83,12 +84,16 @@ static char rx_buff0[16];
 static volatile uint32_t rx_idx0 = 0UL;
 static volatile bool rx_buff0_semaphore = false;
 
-static PIO pio = pio0;
-static uint sm = 0;
-
+static PIO pio_tx = pio0;
+static uint sm_tx = 0;
 static pio_interrupt_source_t pio_irq_src_txnfull;
 static uint irq_idx_txnfull;
 static int8_t pio_irq_txnfull;
+
+static PIO pio_rx = pio0;
+static uint sm_rx = 1;
+static uint irq_idx_rx;
+static int8_t pio_irq_rx;
 
 static int tx_active_status = 0;
 static ustime_t tx_last_byte_ustime;
@@ -96,50 +101,98 @@ static ustime_t tx_last_byte_ustime;
 static ustime_t byte_req_ustime;
 
 // Tx Not-Full Interrupt Disable/Enable Macros
-#define PIO_IRQ_TXNFULL_DISABLE()   pio_set_irqn_source_enabled(pio, irq_idx_txnfull, pio_irq_src_txnfull, false)
-#define PIO_IRQ_TXNFULL_ENABLE()    pio_set_irqn_source_enabled(pio, irq_idx_txnfull, pio_irq_src_txnfull, true)
+#define PIO_IRQ_TXNFULL_DISABLE()   pio_set_irqn_source_enabled(pio_tx, irq_idx_txnfull, pio_irq_src_txnfull, false)
+#define PIO_IRQ_TXNFULL_ENABLE()    pio_set_irqn_source_enabled(pio_tx, irq_idx_txnfull, pio_irq_src_txnfull, true)
 
 /*******************************************************************************
  * @brief PIO-UART Init function
  ******************************************************************************/
 void puart_drv_init(void)
 {
-    pio = pio0;
-    sm = 0;
-
-    uint offset = pio_add_program(pio, &puart_tx_program);
-    puart_tx_program_init(pio, sm, offset, PUART_TX_PIN, PIO_BAUDRATE);
-    pio->txf[sm] = (PIO_DATA_BIT - 1);
-    PUART_DRV_LOG("PUART drv init\r\n");
+    int irq_found_flag;
 
     // Calculate time necessary to transfer a byte (1 start + PIO_DATA_BIT + 1 stop + 1 reserve)
     byte_req_ustime = get_baudrate_transfer_ustime(PIO_BAUDRATE, (1 + PIO_DATA_BIT + 1 + 1), 1);
 
-    // Configure TX Fifo not full interrupt
+    //--------------------------------------------------------------------------
+    // Configure TX-PIO
+    pio_tx = pio0;
+    sm_tx = 0;
+
+    uint offset = pio_add_program(pio_tx, &puart_tx_program);
+    puart_tx_program_init(pio_tx, sm_tx, offset, PUART_TX_PIN, PIO_BAUDRATE);
+    pio_tx->txf[sm_tx] = (PIO_DATA_BIT - 1);
 
     // Find a free irq
-    pio_irq_txnfull = pio_get_irq_num(pio, 0);
+    irq_found_flag = 1;
+    pio_irq_txnfull = pio_get_irq_num(pio_tx, 0);
     if(irq_get_exclusive_handler(pio_irq_txnfull))
     {
         pio_irq_txnfull++;
         if(irq_get_exclusive_handler(pio_irq_txnfull))
         {
-            PUART_DRV_LOG("PUART error all irq in use\r\n");
+            PUART_DRV_LOG("PUART-TX error all irq in use\r\n");
+            irq_found_flag = 0;
         }
     }
 
-    // Enable interrupt
-    irq_add_shared_handler(pio_irq_txnfull, puart_drv_irq, PICO_SHARED_IRQ_HANDLER_DEFAULT_ORDER_PRIORITY); // Add a shared IRQ handler
-    irq_set_enabled(pio_irq_txnfull, true);
+    // Configure TX Fifo not full interrupt
+    if(irq_found_flag != 0)
+    {
+        irq_add_shared_handler(pio_irq_txnfull, irq_txnfull_func, PICO_SHARED_IRQ_HANDLER_DEFAULT_ORDER_PRIORITY);
+        irq_set_enabled(pio_irq_txnfull, true);
 
-    // Get index of the IRQ
-    irq_idx_txnfull = pio_irq_txnfull - pio_get_irq_num(pio, 0);
-    pio_irq_src_txnfull = pio_get_tx_fifo_not_full_interrupt_source(sm);
-    
-    // Disable interrupt
-    // PIO_IRQ_TXNFULL_DISABLE();
-    // irq_set_enabled(pio_irq_txnfull, false);
-    // irq_remove_handler(pio_irq_txnfull, puart_drv_irq);
+        // Get index of the IRQ
+        irq_idx_txnfull = pio_irq_txnfull - pio_get_irq_num(pio_tx, 0);
+        pio_irq_src_txnfull = pio_get_tx_fifo_not_full_interrupt_source(sm_tx);
+        
+        // Disable interrupt
+        // PIO_IRQ_TXNFULL_DISABLE();
+        // irq_set_enabled(pio_irq_txnfull, false);
+        // irq_remove_handler(pio_irq_txnfull, irq_txnfull_func);
+    }
+
+    //PUART_DRV_LOG("PUART-TX drv init: @%i, %i, %i\r\n", offset, pio_irq_txnfull, irq_idx_txnfull);
+
+    //--------------------------------------------------------------------------
+    // Configure RX-PIO
+    pio_rx = pio0;
+    sm_rx = 1;
+
+    offset = pio_add_program(pio_rx, &puart_rx_program);
+    puart_rx_program_init(pio_rx, sm_rx, offset, PUART_RX_PIN, PIO_BAUDRATE);
+
+    // Find a free irq
+    irq_found_flag = 1;
+    pio_irq_rx = pio_get_irq_num(pio_rx, 1);
+    if (irq_get_exclusive_handler(pio_irq_rx))
+    {
+        pio_irq_rx++;
+        if (irq_get_exclusive_handler(pio_irq_rx))
+        {
+            PUART_DRV_LOG("PUART-RX error all irq in use\r\n");
+            irq_found_flag = 0;
+        }
+    }
+
+    // Configure RX interrupt
+    if(irq_found_flag != 0)
+    {
+        irq_add_shared_handler(pio_irq_rx, irq_rx_func, PICO_SHARED_IRQ_HANDLER_DEFAULT_ORDER_PRIORITY);
+        irq_set_enabled(pio_irq_rx, true);
+
+        // Get index of the IRQ
+        irq_idx_rx = pio_irq_rx - pio_get_irq_num(pio_rx, 0);
+        // Set pio to tell us when the FIFO is NOT empty
+        pio_set_irqn_source_enabled(pio_rx, irq_idx_rx, pio_get_rx_fifo_not_empty_interrupt_source(sm_rx), true);
+
+        // Disable interrupt
+        // pio_set_irqn_source_enabled(pio_rx, irq_idx_rx, pio_get_rx_fifo_not_empty_interrupt_source(sm_rx), false);
+        //irq_set_enabled(pio_irq_rx, false);
+        //irq_remove_handler(pio_irq_rx, irq_rx_func);
+    }
+
+    //PUART_DRV_LOG("PUART-RX drv init: @%i, %i, %i\r\n", offset, pio_irq_rx, irq_idx_rx);    
 }
 
 /*******************************************************************************
@@ -199,13 +252,10 @@ static inline uint32_t get_tx_buff_free_cnt(void)
 }
 
 /*******************************************************************************
- * @brief PIO-UART interrupt handler
+ * @brief PIO-UART RX interrupt handler
  ******************************************************************************/
-static void puart_drv_irq(void)
+static void irq_rx_func(void)
 {
-    TP_TGL(TP7);
-
-/*
     rx_wr_old = rx_wr_idx;
 
     // In case we have some data collected in rx backup buffer (rx_buff0), 
@@ -222,9 +272,10 @@ static void puart_drv_irq(void)
         _check_wr_jumps_over_rd();
     }
 
-    while (uart_is_readable(UART_ID)) 
+    while(!pio_sm_is_rx_fifo_empty(pio_rx, sm_rx))
     {
-        char rx_ch = uart_getc(UART_ID);
+
+        char rx_ch = puart_rx_program_getc(pio_rx, sm_rx);
         // Is the interrupt called while reading rx main buffer in uart_drv_get_rx?
         if(read_semaphore)
         {
@@ -236,7 +287,7 @@ static void puart_drv_irq(void)
                 rx_buff0[rx_idx0++] = rx_ch;
             else {
                 // Rx backup buffer (rx_buff0) already full! Received byte lost!
-                UART_DRV_LOG("UART RX buffer0 full\r\n");
+                PUART_DRV_LOG("PUART RX buffer0 full\r\n");
             }
         }
         else{
@@ -250,9 +301,16 @@ static void puart_drv_irq(void)
         }
         TP_TGL(TP4);
     }
-*/
+}
 
-    while(!pio_sm_is_tx_fifo_full(pio, sm))
+/*******************************************************************************
+ * @brief PIO-UART TX interrupt handler
+ ******************************************************************************/
+static void irq_txnfull_func(void)
+{
+    TP_TGL(TP7);
+
+    while(!pio_sm_is_tx_fifo_full(pio_tx, sm_tx))
     {
         // Is the interrupt called while in send function?
         if(send_semaphore)
@@ -275,7 +333,7 @@ static void puart_drv_irq(void)
         }
         // Safe to send the data
         else{
-            pio->txf[sm] = (uint32_t) tx_buffer[tx_rd_idx++];
+            pio_tx->txf[sm_tx] = (uint32_t) tx_buffer[tx_rd_idx++];
             if(tx_rd_idx >= sizeof(tx_buffer))
                 tx_rd_idx = 0UL;
             // Update Tx Buffer free count
@@ -396,12 +454,11 @@ void puart_drv_control_tx_active(void)
             if(tx_active_status == 1)
             {
                 // Check if TX-FIFO is empty
-                if((pio->flevel & PIO_FLEVEL_TX0_BITS) == 0)
+                if((pio_tx->flevel & PIO_FLEVEL_TX0_BITS) == 0)
                 {
                     // Goto status 2 where we wait for the last byte to be sent
                     tx_active_status = 2;
                     tx_last_byte_ustime = get_sys_ustime();
-                    TP_TGL(TP8);
                 }
             }
             else {

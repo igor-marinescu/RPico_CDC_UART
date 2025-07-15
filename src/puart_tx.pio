@@ -4,25 +4,6 @@
 ; SPDX-License-Identifier: BSD-3-Clause
 ;
 
-//.define tx_bit_cnt   8
-.define tx_bit_cnt   10
-.define tx_bit_cnt0  tx_bit_cnt - 1
-
-/*
-.program puart_tx
-.side_set 1 opt
-
-; An 8n1 UART transmit program.
-; OUT pin 0 and side-set pin 0 are both mapped to UART TX pin.
-
-    pull block side 1 [7]           ; Assert stop bit, or stall with line in idle state
-    set x, tx_bit_cnt0 side 0 [7]   ; Preload bit counter, assert start bit for 8 clocks
-bitloop:                            ; This loop will run 8 times (8n1 UART)
-    out pins, 1                     ; Shift 1 bit from OSR to the first OUT pin
-    jmp x-- bitloop   [6]           ; Each loop iteration is 8 cycles.
-*/
-
-
 .program puart_tx
 .side_set 1 opt
 

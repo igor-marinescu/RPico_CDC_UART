@@ -68,6 +68,7 @@ target_link_libraries(rpico_cdc_uart PUBLIC
 
 # by default the header is generated into the build dir
 pico_generate_pio_header(rpico_cdc_uart ${CMAKE_CURRENT_LIST_DIR}/puart_tx.pio)
+pico_generate_pio_header(rpico_cdc_uart ${CMAKE_CURRENT_LIST_DIR}/puart_rx.pio)
 
 pico_add_extra_outputs(rpico_cdc_uart)
 
