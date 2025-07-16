@@ -121,6 +121,7 @@ void puart_drv_init(void)
 
     uint offset = pio_add_program(pio_tx, &puart_tx_program);
     puart_tx_program_init(pio_tx, sm_tx, offset, PUART_TX_PIN, PIO_BAUDRATE);
+    // Send bits_count as first byte to SM
     pio_tx->txf[sm_tx] = (PIO_DATA_BIT - 1);
 
     // Find a free irq
@@ -161,6 +162,8 @@ void puart_drv_init(void)
 
     offset = pio_add_program(pio_rx, &puart_rx_program);
     puart_rx_program_init(pio_rx, sm_rx, offset, PUART_RX_PIN, PIO_BAUDRATE);
+    // Send bits_count as first byte to SM
+    pio_rx->txf[sm_rx] = (PIO_DATA_BIT - 1);
 
     // Find a free irq
     irq_found_flag = 1;

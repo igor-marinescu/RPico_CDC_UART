@@ -250,10 +250,11 @@ int main(void)
     cli_add_func("boot",    NULL,   cli_func_boot,      "boot");
     cli_add_func("memdump", NULL,   cli_func_memdump,   "memdump <addr> <len>");
 
+    MAIN_LOG(" ****************************************\r\n");
     MAIN_LOG(PROJECT_NAME " built: " __DATE__ " " __TIME__ "\r\n");
 
 #ifdef USE_PIO_UART
-    MAIN_LOG("UART mode: PIO\r\n");
+    MAIN_LOG("UART mode: PIO (%ibps, %iN1)\r\n", PIO_BAUDRATE, PIO_DATA_BIT);
 #else
     MAIN_LOG("UART mode: device\r\n");
 #endif    

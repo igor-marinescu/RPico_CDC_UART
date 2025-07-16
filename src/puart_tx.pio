@@ -7,7 +7,8 @@
 .program puart_tx
 .side_set 1 opt
 
-; An 8n1 UART transmit program.
+; An Yn1 UART transmit program. 
+; Y (bits_count) is the first byte received from FIFO
 ; OUT pin 0 and side-set pin 0 are both mapped to UART TX pin.
 
     pull                            ; First get bits_count into OSR register
