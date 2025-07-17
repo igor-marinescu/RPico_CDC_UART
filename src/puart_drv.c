@@ -277,8 +277,13 @@ static void irq_rx_func(void)
 
     while(!pio_sm_is_rx_fifo_empty(pio_rx, sm_rx))
     {
+        // For 8-bit communication
+        //char rx_ch = puart_rx_program_getc(pio_rx, sm_rx);
 
-        char rx_ch = puart_rx_program_getc(pio_rx, sm_rx);
+        // For 9-bit, shift data to right (23 = 32 - 9)
+        uint32_t rx_v32 = pio_rx->rxf[sm_rx];
+        char rx_ch = (char) (rx_v32 >> 23);
+
         // Is the interrupt called while reading rx main buffer in uart_drv_get_rx?
         if(read_semaphore)
         {

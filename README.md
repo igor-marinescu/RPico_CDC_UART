@@ -212,6 +212,11 @@ The Tx interrupt is generated after a byte is sent. We can't send the first byte
 
 ## Notes
 
+__UART/USB devices in Linux__
+
+`/dev/ttyUSB0` - USB-UART converter, a separate IC (usually FTDI).
+`/dev/ttyACM0` - Raspberry Pi Pico with TinyUSB library that implements CDC ACM (USB Communications Device Class).
+
 __Implement TX_ACTIVE Signal__
 
 Set a GPIO as Output and set it (to active High or Low) while transmitting data.

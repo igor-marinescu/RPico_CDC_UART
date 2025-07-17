@@ -93,4 +93,5 @@ static inline char puart_rx_program_getc(PIO pio, uint sm)
 
     return (char)*rxfifo_shift;
 }
+
 %}

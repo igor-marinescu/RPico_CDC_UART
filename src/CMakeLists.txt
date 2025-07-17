@@ -73,7 +73,7 @@ pico_generate_pio_header(rpico_cdc_uart ${CMAKE_CURRENT_LIST_DIR}/puart_rx.pio)
 pico_add_extra_outputs(rpico_cdc_uart)
 
 #-------------------------------------------------------------------------------
-# Deploy
+# Deploy (/dev/ttyACM0)
 #-------------------------------------------------------------------------------
 #set(RPICO_MOUNT_POINT "/media/$ENV{USER}/RPI-RP2/")
 add_custom_target(
@@ -84,6 +84,17 @@ add_custom_target(
     COMMAND ../scripts/firmware_update.sh "${PROJECT_NAME}.uf2"
     DEPENDS rpico_cdc_uart
     COMMENT "Deploying the firmware to pico"
+)
+
+#-------------------------------------------------------------------------------
+# Deploy (/dev/ttyACM1)
+#-------------------------------------------------------------------------------
+add_custom_target(
+    deploy1
+    COMMAND ${CMAKE_COMMAND} -E echo "Deploying to pico ttyACM1..."
+    COMMAND ../scripts/firmware_update.sh "${PROJECT_NAME}.uf2" "/dev/ttyACM1"
+    DEPENDS rpico_cdc_uart
+    COMMENT "Deploying the firmware to pico (/dev/ttyACM1)"
 )
 
 #-------------------------------------------------------------------------------

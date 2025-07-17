@@ -19,12 +19,10 @@ import serial
 import time
 import sys
 import argparse
+import os.path
 
 #-------------------------------------------------------------------------------
 # Default Configuration
-
-DEVICE_NAME_UART = '/dev/ttyUSB0'
-DEVICE_NAME_USB  = '/dev/ttyACM0'
 BAUDRATE = 115200
 TEST_RANGE_FROM = 1
 TEST_RANGE_TO = 2050
@@ -58,12 +56,10 @@ def create_test_data(len):
 parser = argparse.ArgumentParser(prog='test.py',
             description='Test RPico_CDC_UART firmware.')
 
-parser.add_argument('send_device',
-            help='Device that sends data (UART or USB)')
-parser.add_argument('-a', '--uart', default=DEVICE_NAME_UART, dest='uart_device',
-            help='UART device (default: %(default)s)')
-parser.add_argument('-u', '--usb', default=DEVICE_NAME_USB, dest='usb_device',
-            help='USB device (default: %(default)s)')
+parser.add_argument('tx_dev',
+            help='Device that sends data, ex: /dev/ttyUSB0 (USB-UART converter), /dev/ttyACM0 (TinyUSB)')
+parser.add_argument('rx_dev',
+            help='Device that receives data, ex: /dev/ttyUSB0 (USB-UART converter), /dev/ttyACM0 (TinyUSB)')
 parser.add_argument('-b', '--baudrate', default=BAUDRATE, type=int, dest='baudrate',
             help='Baudrate (default: %(default)s)')
 parser.add_argument('-f', '--from', default=TEST_RANGE_FROM, type=int, dest='from_value',
@@ -75,41 +71,34 @@ parser.add_argument('-n', '--no-check', default=0, type=int, dest='no_check',
 
 args = parser.parse_args()
 
-if (args.send_device != 'USB') and (args.send_device != 'UART'):
-    parser.error("send_device can be USB or UART")
+# Check if send and receive devices exists
+if not os.path.exists(args.tx_dev):
+    parser.error(f"Send device (tx_dev) not found: {args.tx_dev} ")
+if not os.path.exists(args.rx_dev):
+    parser.error(f"Receive device (rx_dev) not found: {args.rx_dev} ")
 
 if (args.from_value < 1) or (args.to_value > MAX_RX_BUFFER) or (args.to_value < args.from_value):
     parser.error(f"FROM_VALUE and TO_VALUE must be between {TEST_RANGE_FROM} and {TEST_RANGE_TO}")
 
-DEVICE_NAME_UART = args.uart_device
-DEVICE_NAME_USB  = args.usb_device
 BAUDRATE = args.baudrate
 TEST_RANGE_FROM = args.from_value
 TEST_RANGE_TO = args.to_value
-SEND_DEVICE = args.send_device
+TX_DEV = args.tx_dev
+RX_DEV = args.rx_dev
 
-print("UART device:", DEVICE_NAME_UART)
-print("USB device:", DEVICE_NAME_USB)
+print("Tx Device:", TX_DEV)
+print("Rx device:", RX_DEV)
 print("Baudrate:", BAUDRATE)
 print("From:", TEST_RANGE_FROM)
 print("To:", TEST_RANGE_TO)
-print("Send device:", SEND_DEVICE)
 
-DEVICE_NAME_TX = DEVICE_NAME_UART
-DEVICE_NAME_RX = DEVICE_NAME_USB
-TEST_PREFIX = "UART->USB"
-
-if SEND_DEVICE == 'USB':
-    DEVICE_NAME_TX = DEVICE_NAME_USB
-    DEVICE_NAME_RX = DEVICE_NAME_UART
-    TEST_PREFIX = "USB->UART"
+TEST_PREFIX = TX_DEV + "->" + RX_DEV
 
 #-------------------------------------------------------------------------------
 # Test Code
 
-ser_tx = serial.Serial(DEVICE_NAME_TX, BAUDRATE)
-ser_rx = serial.Serial(DEVICE_NAME_RX, BAUDRATE, timeout=0)
-print(ser_tx.name, "-->", ser_rx.name)
+ser_tx = serial.Serial(TX_DEV, BAUDRATE)
+ser_rx = serial.Serial(RX_DEV, BAUDRATE, timeout=0)
 
 # Give time (~10ms) to pico to configure the UART interface
 time.sleep(0.01)
