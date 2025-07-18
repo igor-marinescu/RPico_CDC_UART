@@ -175,7 +175,7 @@ static inline uint32_t get_tx_buff_free_cnt(void)
     else if(tx_wr_idx < tx_rd_idx)
         return (tx_rd_idx - tx_wr_idx);    
 
-        return sizeof(tx_buffer);
+    return sizeof(tx_buffer);
 }
 
 /*******************************************************************************
@@ -393,7 +393,7 @@ bool uart_drv_check_irq(void)
  * @param buff_max_len [in] the length in bytes (characters) of buff
  * @return count of copied received characters
  ******************************************************************************/
-uint32_t uart_drv_get_rx(char * buff, uint32_t buff_max_len)
+uint32_t uart_drv_get_rx(uint8_t * buff, uint32_t buff_max_len)
 {
     uint32_t buff_idx = 0UL;
 
