@@ -1,0 +1,167 @@
+igor@rpi5:~/pico/pico-dev/RPico_CDC_UART/build $ rm -rf *
+igor@rpi5:~/pico/pico-dev/RPico_CDC_UART/build $ ../scripts/make_profiler.sh
+Start time:1753011098
+Using PICO_SDK_PATH from environment ('/home/igor/pico/pico-sdk')
+PICO_SDK_PATH is /home/igor/pico/pico-sdk
+Defaulting platform (PICO_PLATFORM) to 'rp2040' since not specified.
+Defaulting target board (PICO_BOARD) to 'pico' since not specified.
+Using board configuration from /home/igor/pico/pico-sdk/src/boards/include/boards/pico.h
+Pico Platform (PICO_PLATFORM) is 'rp2040'.
+-- Defaulting build type to 'Release' since not specified.
+Defaulting compiler (PICO_COMPILER) to 'pico_arm_cortex_m0plus_gcc' since not specified.
+Configuring toolchain based on PICO_COMPILER 'pico_arm_cortex_m0plus_gcc'
+Defaulting PICO_GCC_TRIPLE to 'arm-none-eabi'
+-- The C compiler identification is GNU 12.2.1
+-- The CXX compiler identification is GNU 12.2.1
+-- Detecting C compiler ABI info
+-- Detecting C compiler ABI info - done
+-- Check for working C compiler: /usr/bin/arm-none-eabi-gcc - skipped
+-- Detecting C compile features
+-- Detecting C compile features - done
+-- Detecting CXX compiler ABI info
+-- Detecting CXX compiler ABI info - done
+-- Check for working CXX compiler: /usr/bin/arm-none-eabi-g++ - skipped
+-- Detecting CXX compile features
+-- Detecting CXX compile features - done
+-- The ASM compiler identification is GNU
+-- Found assembler: /usr/bin/arm-none-eabi-gcc
+Build type is Release
+-- Found Python3: /usr/bin/python3 (found version "3.11.2") found components: Interpreter
+TinyUSB available at /home/igor/pico/pico-sdk/lib/tinyusb/src/portable/raspberrypi/rp2040; enabling build support for USB.
+BTstack available at /home/igor/pico/pico-sdk/lib/btstack
+cyw43-driver available at /home/igor/pico/pico-sdk/lib/cyw43-driver
+lwIP available at /home/igor/pico/pico-sdk/lib/lwip
+mbedtls available at /home/igor/pico/pico-sdk/lib/mbedtls
+-- Configuring done
+-- Generating done
+-- Build files have been written to: /home/igor/pico/pico-dev/RPico_CDC_UART/build
+[  0%] Building ASM object pico-sdk/src/rp2040/boot_stage2/CMakeFiles/bs2_default.dir/compile_time_choice.S.o
+[  1%] Linking ASM executable bs2_default.elf
+[  1%] Built target bs2_default
+[  2%] Generating bs2_default.bin
+[  3%] Generating bs2_default_padded_checksummed.S
+[  4%] Building ASM object pico-sdk/src/rp2040/boot_stage2/CMakeFiles/bs2_default_library.dir/bs2_default_padded_checksummed.S.o
+[  4%] Built target bs2_default_library
+[  5%] Creating directories for 'pioasmBuild'
+[  6%] No download step for 'pioasmBuild'
+[  7%] No update step for 'pioasmBuild'
+[  8%] No patch step for 'pioasmBuild'
+[  9%] Performing configure step for 'pioasmBuild'
+Not searching for unused variables given on the command line.
+loading initial cache file /home/igor/pico/pico-dev/RPico_CDC_UART/build/pico-sdk/src/rp2_common/pico_cyw43_driver/pioasm/tmp/pioasmBuild-cache-Release.cmake
+-- The CXX compiler identification is GNU 12.2.0
+-- Detecting CXX compiler ABI info
+-- Detecting CXX compiler ABI info - done
+-- Check for working CXX compiler: /usr/bin/c++ - skipped
+-- Detecting CXX compile features
+-- Detecting CXX compile features - done
+-- Configuring done
+-- Generating done
+-- Build files have been written to: /home/igor/pico/pico-dev/RPico_CDC_UART/build/pioasm
+[  9%] Performing build step for 'pioasmBuild'
+[100%] Built target pioasm
+[ 10%] Performing install step for 'pioasmBuild'
+[100%] Built target pioasm
+Install the project...
+-- Install configuration: "Release"
+[ 11%] Completed 'pioasmBuild'
+[ 11%] Built target pioasmBuild
+[ 12%] Generating puart_tx.pio.h
+[ 12%] Built target rpico_cdc_uart_puart_tx_pio_h
+[ 13%] Generating puart_rx.pio.h
+[ 13%] Built target rpico_cdc_uart_puart_rx_pio_h
+[ 14%] Building C object CMakeFiles/rpico_cdc_uart.dir/main.c.o
+[ 15%] Building C object CMakeFiles/rpico_cdc_uart.dir/usb_descriptors.c.o
+[ 16%] Building C object CMakeFiles/rpico_cdc_uart.dir/usb_main.c.o
+[ 16%] Building C object CMakeFiles/rpico_cdc_uart.dir/gpio_drv.c.o
+[ 17%] Building C object CMakeFiles/rpico_cdc_uart.dir/uart_drv.c.o
+[ 18%] Building C object CMakeFiles/rpico_cdc_uart.dir/uart_ascii.c.o
+[ 19%] Building C object CMakeFiles/rpico_cdc_uart.dir/cli.c.o
+[ 20%] Building C object CMakeFiles/rpico_cdc_uart.dir/utils.c.o
+[ 21%] Building C object CMakeFiles/rpico_cdc_uart.dir/puart_drv.c.o
+[ 22%] Building C object CMakeFiles/rpico_cdc_uart.dir/ustime.c.o
+[ 23%] Building C object CMakeFiles/rpico_cdc_uart.dir/home/igor/pico/pico-sdk/src/rp2_common/pico_stdlib/stdlib.c.o
+[ 25%] Building C object CMakeFiles/rpico_cdc_uart.dir/home/igor/pico/pico-sdk/src/rp2_common/hardware_gpio/gpio.c.o
+[ 26%] Building C object CMakeFiles/rpico_cdc_uart.dir/home/igor/pico/pico-sdk/src/rp2040/pico_platform/platform.c.o
+[ 26%] Building C object CMakeFiles/rpico_cdc_uart.dir/home/igor/pico/pico-sdk/src/rp2_common/pico_platform_panic/panic.c.o
+[ 27%] Building C object CMakeFiles/rpico_cdc_uart.dir/home/igor/pico/pico-sdk/src/common/hardware_claim/claim.c.o
+[ 28%] Building C object CMakeFiles/rpico_cdc_uart.dir/home/igor/pico/pico-sdk/src/rp2_common/hardware_sync/sync.c.o
+[ 29%] Building C object CMakeFiles/rpico_cdc_uart.dir/home/igor/pico/pico-sdk/src/rp2_common/hardware_sync_spin_lock/sync_spin_lock.c.o
+[ 30%] Building C object CMakeFiles/rpico_cdc_uart.dir/home/igor/pico/pico-sdk/src/rp2_common/hardware_irq/irq.c.o
+[ 31%] Building ASM object CMakeFiles/rpico_cdc_uart.dir/home/igor/pico/pico-sdk/src/rp2_common/hardware_irq/irq_handler_chain.S.o
+[ 32%] Building C object CMakeFiles/rpico_cdc_uart.dir/home/igor/pico/pico-sdk/src/common/pico_sync/sem.c.o
+[ 33%] Building C object CMakeFiles/rpico_cdc_uart.dir/home/igor/pico/pico-sdk/src/common/pico_sync/lock_core.c.o
+[ 34%] Building C object CMakeFiles/rpico_cdc_uart.dir/home/igor/pico/pico-sdk/src/common/pico_sync/mutex.c.o
+[ 35%] Building C object CMakeFiles/rpico_cdc_uart.dir/home/igor/pico/pico-sdk/src/common/pico_sync/critical_section.c.o
+[ 35%] Building C object CMakeFiles/rpico_cdc_uart.dir/home/igor/pico/pico-sdk/src/common/pico_time/time.c.o
+[ 36%] Building C object CMakeFiles/rpico_cdc_uart.dir/home/igor/pico/pico-sdk/src/common/pico_time/timeout_helper.c.o
+[ 37%] Building C object CMakeFiles/rpico_cdc_uart.dir/home/igor/pico/pico-sdk/src/rp2_common/hardware_timer/timer.c.o
+[ 38%] Building C object CMakeFiles/rpico_cdc_uart.dir/home/igor/pico/pico-sdk/src/common/pico_util/datetime.c.o
+[ 39%] Building C object CMakeFiles/rpico_cdc_uart.dir/home/igor/pico/pico-sdk/src/common/pico_util/pheap.c.o
+[ 40%] Building C object CMakeFiles/rpico_cdc_uart.dir/home/igor/pico/pico-sdk/src/common/pico_util/queue.c.o
+[ 41%] Building C object CMakeFiles/rpico_cdc_uart.dir/home/igor/pico/pico-sdk/src/rp2_common/hardware_uart/uart.c.o
+[ 42%] Building C object CMakeFiles/rpico_cdc_uart.dir/home/igor/pico/pico-sdk/src/rp2_common/hardware_clocks/clocks.c.o
+[ 43%] Building C object CMakeFiles/rpico_cdc_uart.dir/home/igor/pico/pico-sdk/src/rp2_common/hardware_pll/pll.c.o
+[ 44%] Building C object CMakeFiles/rpico_cdc_uart.dir/home/igor/pico/pico-sdk/src/rp2_common/hardware_vreg/vreg.c.o
+[ 44%] Building C object CMakeFiles/rpico_cdc_uart.dir/home/igor/pico/pico-sdk/src/rp2_common/hardware_watchdog/watchdog.c.o
+[ 45%] Building C object CMakeFiles/rpico_cdc_uart.dir/home/igor/pico/pico-sdk/src/rp2_common/hardware_ticks/ticks.c.o
+[ 46%] Building C object CMakeFiles/rpico_cdc_uart.dir/home/igor/pico/pico-sdk/src/rp2_common/pico_bootrom/bootrom.c.o
+[ 47%] Building C object CMakeFiles/rpico_cdc_uart.dir/home/igor/pico/pico-sdk/src/rp2_common/pico_bootrom/bootrom_lock.c.o
+[ 48%] Building C object CMakeFiles/rpico_cdc_uart.dir/home/igor/pico/pico-sdk/src/rp2_common/hardware_boot_lock/boot_lock.c.o
+[ 50%] Building C object CMakeFiles/rpico_cdc_uart.dir/home/igor/pico/pico-sdk/src/rp2_common/pico_flash/flash.c.o
+[ 51%] Building C object CMakeFiles/rpico_cdc_uart.dir/home/igor/pico/pico-sdk/src/rp2_common/hardware_xosc/xosc.c.o
+[ 52%] Building ASM object CMakeFiles/rpico_cdc_uart.dir/home/igor/pico/pico-sdk/src/rp2_common/hardware_divider/divider.S.o
+[ 53%] Building C object CMakeFiles/rpico_cdc_uart.dir/home/igor/pico/pico-sdk/src/rp2_common/pico_runtime/runtime.c.o
+[ 54%] Building C object CMakeFiles/rpico_cdc_uart.dir/home/igor/pico/pico-sdk/src/rp2_common/pico_runtime_init/runtime_init.c.o
+[ 54%] Building C object CMakeFiles/rpico_cdc_uart.dir/home/igor/pico/pico-sdk/src/rp2_common/pico_runtime_init/runtime_init_clocks.c.o
+[ 55%] Building C object CMakeFiles/rpico_cdc_uart.dir/home/igor/pico/pico-sdk/src/rp2_common/pico_runtime_init/runtime_init_stack_guard.c.o
+[ 56%] Building ASM object CMakeFiles/rpico_cdc_uart.dir/home/igor/pico/pico-sdk/src/rp2_common/pico_bit_ops/bit_ops_aeabi.S.o
+[ 57%] Building ASM object CMakeFiles/rpico_cdc_uart.dir/home/igor/pico/pico-sdk/src/rp2_common/pico_divider/divider_hardware.S.o
+[ 58%] Building ASM object CMakeFiles/rpico_cdc_uart.dir/home/igor/pico/pico-sdk/src/rp2_common/pico_double/double_aeabi_rp2040.S.o
+[ 59%] Building C object CMakeFiles/rpico_cdc_uart.dir/home/igor/pico/pico-sdk/src/rp2_common/pico_double/double_init_rom_rp2040.c.o
+[ 60%] Building C object CMakeFiles/rpico_cdc_uart.dir/home/igor/pico/pico-sdk/src/rp2_common/pico_double/double_math.c.o
+[ 61%] Building ASM object CMakeFiles/rpico_cdc_uart.dir/home/igor/pico/pico-sdk/src/rp2_common/pico_double/double_v1_rom_shim_rp2040.S.o
+[ 62%] Building ASM object CMakeFiles/rpico_cdc_uart.dir/home/igor/pico/pico-sdk/src/rp2_common/pico_int64_ops/pico_int64_ops_aeabi.S.o
+[ 63%] Building ASM object CMakeFiles/rpico_cdc_uart.dir/home/igor/pico/pico-sdk/src/rp2_common/pico_float/float_aeabi_rp2040.S.o
+[ 63%] Building C object CMakeFiles/rpico_cdc_uart.dir/home/igor/pico/pico-sdk/src/rp2_common/pico_float/float_init_rom_rp2040.c.o
+[ 64%] Building C object CMakeFiles/rpico_cdc_uart.dir/home/igor/pico/pico-sdk/src/rp2_common/pico_float/float_math.c.o
+[ 65%] Building ASM object CMakeFiles/rpico_cdc_uart.dir/home/igor/pico/pico-sdk/src/rp2_common/pico_float/float_v1_rom_shim_rp2040.S.o
+[ 66%] Building C object CMakeFiles/rpico_cdc_uart.dir/home/igor/pico/pico-sdk/src/rp2_common/pico_malloc/malloc.c.o
+[ 67%] Building ASM object CMakeFiles/rpico_cdc_uart.dir/home/igor/pico/pico-sdk/src/rp2_common/pico_mem_ops/mem_ops_aeabi.S.o
+[ 68%] Building C object CMakeFiles/rpico_cdc_uart.dir/home/igor/pico/pico-sdk/src/rp2_common/pico_atomic/atomic.c.o
+[ 69%] Building CXX object CMakeFiles/rpico_cdc_uart.dir/home/igor/pico/pico-sdk/src/rp2_common/pico_cxx_options/new_delete.cpp.o
+[ 70%] Building C object CMakeFiles/rpico_cdc_uart.dir/home/igor/pico/pico-sdk/src/rp2_common/pico_standard_binary_info/standard_binary_info.c.o
+[ 71%] Building C object CMakeFiles/rpico_cdc_uart.dir/home/igor/pico/pico-sdk/src/rp2_common/pico_printf/printf.c.o
+[ 72%] Building ASM object CMakeFiles/rpico_cdc_uart.dir/home/igor/pico/pico-sdk/src/rp2_common/pico_crt0/crt0.S.o
+[ 72%] Building C object CMakeFiles/rpico_cdc_uart.dir/home/igor/pico/pico-sdk/src/rp2_common/pico_clib_interface/newlib_interface.c.o
+[ 73%] Building C object CMakeFiles/rpico_cdc_uart.dir/home/igor/pico/pico-sdk/src/rp2_common/pico_stdio/stdio.c.o
+[ 75%] Building C object CMakeFiles/rpico_cdc_uart.dir/home/igor/pico/pico-sdk/src/rp2_common/pico_stdio_uart/stdio_uart.c.o
+[ 76%] Building C object CMakeFiles/rpico_cdc_uart.dir/home/igor/pico/pico-sdk/lib/tinyusb/src/portable/raspberrypi/rp2040/dcd_rp2040.c.o
+[ 77%] Building C object CMakeFiles/rpico_cdc_uart.dir/home/igor/pico/pico-sdk/lib/tinyusb/src/portable/raspberrypi/rp2040/rp2040_usb.c.o
+[ 78%] Building C object CMakeFiles/rpico_cdc_uart.dir/home/igor/pico/pico-sdk/lib/tinyusb/src/device/usbd.c.o
+[ 79%] Building C object CMakeFiles/rpico_cdc_uart.dir/home/igor/pico/pico-sdk/lib/tinyusb/src/device/usbd_control.c.o
+[ 80%] Building C object CMakeFiles/rpico_cdc_uart.dir/home/igor/pico/pico-sdk/lib/tinyusb/src/class/audio/audio_device.c.o
+[ 81%] Building C object CMakeFiles/rpico_cdc_uart.dir/home/igor/pico/pico-sdk/lib/tinyusb/src/class/cdc/cdc_device.c.o
+[ 82%] Building C object CMakeFiles/rpico_cdc_uart.dir/home/igor/pico/pico-sdk/lib/tinyusb/src/class/dfu/dfu_device.c.o
+[ 82%] Building C object CMakeFiles/rpico_cdc_uart.dir/home/igor/pico/pico-sdk/lib/tinyusb/src/class/dfu/dfu_rt_device.c.o
+[ 83%] Building C object CMakeFiles/rpico_cdc_uart.dir/home/igor/pico/pico-sdk/lib/tinyusb/src/class/hid/hid_device.c.o
+[ 84%] Building C object CMakeFiles/rpico_cdc_uart.dir/home/igor/pico/pico-sdk/lib/tinyusb/src/class/midi/midi_device.c.o
+[ 85%] Building C object CMakeFiles/rpico_cdc_uart.dir/home/igor/pico/pico-sdk/lib/tinyusb/src/class/msc/msc_device.c.o
+[ 86%] Building C object CMakeFiles/rpico_cdc_uart.dir/home/igor/pico/pico-sdk/lib/tinyusb/src/class/net/ecm_rndis_device.c.o
+[ 87%] Building C object CMakeFiles/rpico_cdc_uart.dir/home/igor/pico/pico-sdk/lib/tinyusb/src/class/net/ncm_device.c.o
+[ 88%] Building C object CMakeFiles/rpico_cdc_uart.dir/home/igor/pico/pico-sdk/lib/tinyusb/src/class/usbtmc/usbtmc_device.c.o
+[ 89%] Building C object CMakeFiles/rpico_cdc_uart.dir/home/igor/pico/pico-sdk/lib/tinyusb/src/class/vendor/vendor_device.c.o
+[ 90%] Building C object CMakeFiles/rpico_cdc_uart.dir/home/igor/pico/pico-sdk/lib/tinyusb/src/class/video/video_device.c.o
+[ 91%] Building C object CMakeFiles/rpico_cdc_uart.dir/home/igor/pico/pico-sdk/lib/tinyusb/src/tusb.c.o
+[ 91%] Building C object CMakeFiles/rpico_cdc_uart.dir/home/igor/pico/pico-sdk/lib/tinyusb/src/common/tusb_fifo.c.o
+[ 92%] Building C object CMakeFiles/rpico_cdc_uart.dir/home/igor/pico/pico-sdk/src/rp2_common/pico_fix/rp2040_usb_device_enumeration/rp2040_usb_device_enumeration.c.o
+[ 93%] Building C object CMakeFiles/rpico_cdc_uart.dir/home/igor/pico/pico-sdk/lib/tinyusb/hw/bsp/rp2040/family.c.o
+[ 94%] Building C object CMakeFiles/rpico_cdc_uart.dir/home/igor/pico/pico-sdk/src/rp2_common/pico_unique_id/unique_id.c.o
+[ 95%] Building C object CMakeFiles/rpico_cdc_uart.dir/home/igor/pico/pico-sdk/src/rp2_common/hardware_flash/flash.c.o
+[ 96%] Building C object CMakeFiles/rpico_cdc_uart.dir/home/igor/pico/pico-sdk/src/rp2_common/hardware_xip_cache/xip_cache.c.o
+[ 97%] Building C object CMakeFiles/rpico_cdc_uart.dir/home/igor/pico/pico-sdk/src/rp2_common/pico_multicore/multicore.c.o
+[ 98%] Building C object CMakeFiles/rpico_cdc_uart.dir/home/igor/pico/pico-sdk/src/rp2_common/hardware_pio/pio.c.o
+[100%] Linking CXX executable rpico_cdc_uart.elf
+[100%] Built target rpico_cdc_uart
+End time:1753011177
+Delta time: 79
