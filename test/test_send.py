@@ -24,10 +24,9 @@ import os.path
 #-------------------------------------------------------------------------------
 # Default Configuration
 BAUDRATE = 115200
-TEST_RANGE_FROM = 1
-TEST_RANGE_TO = 2050
 MIN_TIMEOUT_S = 0.05
 BIT_CNT = 9
+MAX_RX_BUFFER = 256
 DATA_HBLB = True
 
 #-------------------------------------------------------------------------------
@@ -47,7 +46,7 @@ def hex_dump(b):
 def create_test_data(len):
     """ Create a template of test data
     """
-    if BIT_CNT > 8:
+    if BIT_CNT == 9:
         test_data = bytearray(len * 2)
         for i in range(len):
             if DATA_HBLB:
@@ -87,12 +86,6 @@ parser.add_argument('rx_dev',
             help='Device that receives data, ex: /dev/ttyUSB0 (USB-UART converter), /dev/ttyACM0 (TinyUSB)')
 parser.add_argument('-b', '--baudrate', default=BAUDRATE, type=int, dest='baudrate',
             help='Baudrate (default: %(default)s)')
-parser.add_argument('-f', '--from', default=TEST_RANGE_FROM, type=int, dest='from_value',
-            help='Test range from (default: %(default)s)')
-parser.add_argument('-t', '--to', default=TEST_RANGE_TO, type=int, dest='to_value',
-            help='Test range to (default: %(default)s)')
-parser.add_argument('-n', '--no-check', default=0, type=int, dest='no_check',
-            help='Do not check the result (default: %(default)s)')
 
 args = parser.parse_args()
 
@@ -102,20 +95,13 @@ if not os.path.exists(args.tx_dev):
 if not os.path.exists(args.rx_dev):
     parser.error(f"Receive device (rx_dev) not found: {args.rx_dev} ")
 
-if (args.from_value < 1) or (args.to_value > TEST_RANGE_TO) or (args.to_value < args.from_value):
-    parser.error(f"FROM_VALUE and TO_VALUE must be between {TEST_RANGE_FROM} and {TEST_RANGE_TO}")
-
 BAUDRATE = args.baudrate
-TEST_RANGE_FROM = args.from_value
-TEST_RANGE_TO = args.to_value
 TX_DEV = args.tx_dev
 RX_DEV = args.rx_dev
 
 print("Tx Device:", TX_DEV)
 print("Rx device:", RX_DEV)
 print("Baudrate:", BAUDRATE)
-print("From:", TEST_RANGE_FROM)
-print("To:", TEST_RANGE_TO)
 
 TEST_PREFIX = TX_DEV + "->" + RX_DEV
 
@@ -128,43 +114,18 @@ ser_rx = serial.Serial(RX_DEV, BAUDRATE, timeout=0)
 # Give time (~10ms) to pico to configure the UART interface
 time.sleep(0.01)
 
-for i in range(TEST_RANGE_FROM, TEST_RANGE_TO):
+frame_cnt = 10
+test_data = create_test_data(10)
+print('Send {:d} bytes:'.format(len(test_data)))
+hex_dump(test_data)
 
+ser_tx.write(test_data)
+ser_tx.flush()
+time.sleep(calculate_send_time(BIT_CNT, frame_cnt))
+rx_bytes = ser_rx.read(MAX_RX_BUFFER)
 
-    test_data = create_test_data(i)
-
-    ser_tx.write(test_data)
-    ser_tx.flush()
-    time.sleep(calculate_send_time(BIT_CNT, i))
-
-    MAX_RX_BUFFER = TEST_RANGE_TO
-    if BIT_CNT > 8:
-        MAX_RX_BUFFER = MAX_RX_BUFFER * 2
-    rx_bytes = ser_rx.read(MAX_RX_BUFFER)
-
-    rx_len_expect = i
-    if BIT_CNT > 8:
-        rx_len_expect = rx_len_expect * 2
-
-    # Intentionally inject an error (to test if we detect it)
-    #if i == 30:
-    #    test_data[10] = 0
-
-    if args.no_check == 0:
-
-        if (len(rx_bytes) == rx_len_expect) and (rx_bytes == test_data):
-            #sys.stdout.write('{} {:5d} ({:02X}): Ok \r'.format(TEST_PREFIX, i, i))
-            #sys.stdout.flush()
-            print('{} {:5d} ({:02X}): Ok'.format(TEST_PREFIX, i, i))
-        else:
-            print('{} {:5d} ({:02X}): Failed'.format(TEST_PREFIX, i, i))
-            print('Sent {:d} bytes:'.format(len(test_data)))
-            hex_dump(test_data)
-            print('Received {:d} bytes:'.format(len(rx_bytes)))
-            hex_dump(rx_bytes)
-            break
-    else:
-            print('{} {:5d} ({:02X}): (no check)'.format(TEST_PREFIX, i, i))
+print('Received {:d} bytes:'.format(len(rx_bytes)))
+hex_dump(rx_bytes)
 
 ser_tx.close()
 ser_rx.close()

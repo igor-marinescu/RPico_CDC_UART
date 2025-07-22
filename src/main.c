@@ -52,6 +52,13 @@
 // System time in micro-seconds
 typedef uint32_t ustime_t;
 
+// Buffers size
+#define MAIN_USB_TX_BUFF    2048
+#define MAIN_USB_RX_BUFF    2048
+
+#define MAIN_UART_TX_BUFF   2048
+#define MAIN_UART_RX_BUFF   2048
+
 //******************************************************************************
 // Global Variables
 //******************************************************************************
@@ -60,14 +67,22 @@ typedef uint32_t ustime_t;
 ustime_t sys_ustime = 0;
 
 // Data buffers used for USB-UART bridge functionality
-static uint32_t usb_rx_cnt = 0;
-static uint8_t  usb_rx_data[2048];
+static uint8_t  usb_tx_data[MAIN_USB_TX_BUFF];
+static uint8_t  usb_rx_data[MAIN_USB_RX_BUFF];
 static uint32_t usb_tx_cnt = 0;
-static uint8_t  usb_tx_data[2048];
+
+#ifdef USE_PIO_UART
+static piodata_t  uart_tx_data[MAIN_UART_TX_BUFF];
+static piodata_t  uart_rx_data[MAIN_UART_RX_BUFF];
+#define UART_TX_DATA_FREE_BYTES()   (MAIN_UART_TX_BUFF-uart_tx_cnt)*sizeof(piodata_t)
+#define UART_TX_CNT_ADD_BYTES(x)    uart_tx_cnt += ((x)/sizeof(piodata_t));
+#else
+static uint8_t  uart_tx_data[MAIN_UART_TX_BUFF];
+static uint8_t  uart_rx_data[MAIN_UART_RX_BUFF];
+#define UART_TX_DATA_FREE_BYTES()   (MAIN_UART_TX_BUFF-uart_tx_cnt)
+#define UART_TX_CNT_ADD_BYTES(x)    uart_tx_cnt += (x);
+#endif
 static uint32_t uart_tx_cnt = 0;
-static uint8_t  uart_tx_data[2048];
-static uint32_t uart_rx_cnt = 0;
-static uint8_t  uart_rx_data[2048];
 
 // USB line coding
 uint32_t usb_line_coding_changed_cnt = 0;
@@ -259,6 +274,7 @@ int main(void)
     MAIN_LOG("UART mode: device\r\n");
 #endif    
 
+    // Start second core for the USB communication
     multicore_launch_core1(usb_main);
 
     #ifdef UART_RX_BYTES_TOUT
@@ -270,8 +286,8 @@ int main(void)
         sys_ustime = get_sys_ustime();
         TP_TGL(TP3);
 
-        if(uart_tx_cnt > sizeof(uart_tx_data))
-            uart_tx_cnt = sizeof(uart_tx_data);
+        if(uart_tx_cnt > MAIN_UART_TX_BUFF)
+            uart_tx_cnt = MAIN_UART_TX_BUFF;
 
         if(usb_tx_cnt > sizeof(usb_tx_data))
             usb_tx_cnt = sizeof(usb_tx_data);
@@ -304,11 +320,11 @@ int main(void)
         //----------------------------------------------------------------------
 
         // USB data received?
-        usb_rx_cnt = usb_get_rx(usb_rx_data, sizeof(usb_rx_data));
+        uint32_t usb_rx_cnt = usb_get_rx(usb_rx_data, sizeof(usb_rx_data));
         if(usb_rx_cnt > 0UL)
         {
             // Check how much available space in uart_tx_data
-            uint32_t available = sizeof(uart_tx_data) - uart_tx_cnt;
+            uint32_t available = UART_TX_DATA_FREE_BYTES();
             if(usb_rx_cnt > available)
             {
                 usb_rx_cnt = available;
@@ -320,7 +336,7 @@ int main(void)
             if(usb_rx_cnt > 0UL)
             {
                 memcpy(&uart_tx_data[uart_tx_cnt], usb_rx_data,  usb_rx_cnt);
-                uart_tx_cnt += usb_rx_cnt;
+                UART_TX_CNT_ADD_BYTES(usb_rx_cnt);
             }
         }
 
@@ -350,33 +366,33 @@ int main(void)
 
         // UART data received?
 #ifdef USE_PIO_UART
-        uart_rx_cnt = puart_drv_get_rx(uart_rx_data, sizeof(uart_rx_data));
+        uint32_t uart_rx_cnt = puart_drv_get_rx(uart_rx_data, MAIN_UART_RX_BUFF);
+        uint32_t uart_rx_bytes = uart_rx_cnt * sizeof(piodata_t);
 #else
-        uart_rx_cnt = uart_drv_get_rx(uart_rx_data, sizeof(uart_rx_data));
+        uint32_t uart_rx_cnt = uart_drv_get_rx(uart_rx_data, MAIN_UART_RX_BUFF);
+        uint32_t uart_rx_bytes = uart_rx_cnt;
 #endif
-        if(uart_rx_cnt > 0UL)
+        if(uart_rx_bytes > 0UL)
         {
             // Check how much available space in usb_tx_data
             uint32_t available = sizeof(usb_tx_data) - usb_tx_cnt;
-            if(uart_rx_cnt > available)
+            if(uart_rx_bytes > available)
             {
-                uart_rx_cnt = available;
+                uart_rx_bytes = available;
                 // Data lost, no more place in USB buffer
                 MAIN_LOG("UART rx lost (USB tx full)\r\n");
             }
 
             // Append received UART data to USB tx buffer
-            if(uart_rx_cnt > 0UL)
+            if(uart_rx_bytes > 0UL)
             {
-                memcpy(&usb_tx_data[usb_tx_cnt], uart_rx_data,  uart_rx_cnt);
-                usb_tx_cnt += uart_rx_cnt;
+                memcpy(&usb_tx_data[usb_tx_cnt], uart_rx_data,  uart_rx_bytes);
+                usb_tx_cnt += uart_rx_bytes;
             }
 
-            uart_rx_cnt = 0;
             uart_rx_ustime = sys_ustime;
         }
 
-           
         // UART data to send? 
         // To avoid calling memmove for every free byte (this is too expensive)
         // send data to UART driver only if the tx buffer is >= 1/4 free
@@ -392,6 +408,7 @@ int main(void)
                 // Could not sent all data? Move the remaining UART tx buffer 
                 // to left to send it next time
                 TP_SET(TP9);
+                //!!! TODO: below line must be corrected, size for piodata !!!
                 memmove(&uart_tx_data[0], &uart_tx_data[sent],  uart_tx_cnt - sent);
                 uart_tx_cnt -= sent;
                 TP_CLR(TP9);
