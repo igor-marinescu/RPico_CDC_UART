@@ -397,6 +397,7 @@ int main(void)
         // To avoid calling memmove for every free byte (this is too expensive)
         // send data to UART driver only if the tx buffer is >= 1/4 free
 #ifdef USE_PIO_UART
+
         if((uart_tx_cnt > 0UL) && (puart_drv_get_tx_free_cnt() >= (PUART_TX_BUFF>>2))){
             uint32_t sent = puart_drv_send_buff(uart_tx_data, uart_tx_cnt);
 #else
@@ -407,11 +408,13 @@ int main(void)
             {
                 // Could not sent all data? Move the remaining UART tx buffer 
                 // to left to send it next time
-                TP_SET(TP9);
-                //!!! TODO: below line must be corrected, size for piodata !!!
-                memmove(&uart_tx_data[0], &uart_tx_data[sent],  uart_tx_cnt - sent);
+                TP_TGL(TP9);
+#ifdef USE_PIO_UART
+                memmove(&uart_tx_data[0], &uart_tx_data[sent],  (uart_tx_cnt - sent) * sizeof(piodata_t));
+#else
+                memmove(&uart_tx_data[0], &uart_tx_data[sent],  (uart_tx_cnt - sent));
+#endif
                 uart_tx_cnt -= sent;
-                TP_CLR(TP9);
             }
             else uart_tx_cnt = 0UL;
         }
