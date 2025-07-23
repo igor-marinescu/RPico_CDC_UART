@@ -59,6 +59,22 @@ typedef uint32_t ustime_t;
 #define MAIN_UART_TX_BUFF   2048
 #define MAIN_UART_RX_BUFF   2048
 
+#ifdef USE_PIO_UART
+    // Use PIO-UART
+    typedef piodata_t uartdata_t;
+    #define UART_GET_RX(buff, len)  puart_drv_get_rx((buff), (len))
+    #define UART_GET_TX_FREE_CNT()  puart_drv_get_tx_free_cnt()
+    #define UART_SEND(buff, len)    puart_drv_send_buff((buff), (len))
+    #define UART_CONTROL_TX_ACT()   puart_drv_control_tx_active()
+#else
+    // Use UART
+    typedef uint8_t uartdata_t;
+    #define UART_GET_RX(buff, len)  uart_drv_get_rx((buff), (len))
+    #define UART_GET_TX_FREE_CNT()  uart_drv_get_tx_free_cnt() 
+    #define UART_SEND(buff, len)    uart_drv_send_buff((buff), (len))
+    #define UART_CONTROL_TX_ACT()   uart_drv_control_tx_active()
+#endif
+
 //******************************************************************************
 // Global Variables
 //******************************************************************************
@@ -71,17 +87,8 @@ static uint8_t  usb_tx_data[MAIN_USB_TX_BUFF];
 static uint8_t  usb_rx_data[MAIN_USB_RX_BUFF];
 static uint32_t usb_tx_cnt = 0;
 
-#ifdef USE_PIO_UART
-static piodata_t  uart_tx_data[MAIN_UART_TX_BUFF];
-static piodata_t  uart_rx_data[MAIN_UART_RX_BUFF];
-#define UART_TX_DATA_FREE_BYTES()   (MAIN_UART_TX_BUFF-uart_tx_cnt)*sizeof(piodata_t)
-#define UART_TX_CNT_ADD_BYTES(x)    uart_tx_cnt += ((x)/sizeof(piodata_t));
-#else
-static uint8_t  uart_tx_data[MAIN_UART_TX_BUFF];
-static uint8_t  uart_rx_data[MAIN_UART_RX_BUFF];
-#define UART_TX_DATA_FREE_BYTES()   (MAIN_UART_TX_BUFF-uart_tx_cnt)
-#define UART_TX_CNT_ADD_BYTES(x)    uart_tx_cnt += (x);
-#endif
+static uartdata_t uart_tx_data[MAIN_UART_TX_BUFF];
+static uartdata_t uart_rx_data[MAIN_UART_RX_BUFF];
 static uint32_t uart_tx_cnt = 0;
 
 // USB line coding
@@ -252,14 +259,7 @@ int main(void)
 
     gpio_drv_init();
 
-#ifdef USE_PIO_UART
-    puart_drv_init();
-#else
-    uart_drv_init(&uart_line_coding);
-#endif
-
     uart_ascii_init();
-
     cli_init();
     cli_add_func("help",    NULL,   cli_func_help,      "help");
     cli_add_func("boot",    NULL,   cli_func_boot,      "boot");
@@ -269,10 +269,12 @@ int main(void)
     MAIN_LOG(PROJECT_NAME " built: " __DATE__ " " __TIME__ "\r\n");
 
 #ifdef USE_PIO_UART
+    puart_drv_init();
     MAIN_LOG("UART mode: PIO (%ibps, %iN1)\r\n", PIO_BAUDRATE, PIO_DATA_BIT);
 #else
+    uart_drv_init(&uart_line_coding);
     MAIN_LOG("UART mode: device\r\n");
-#endif    
+#endif
 
     // Start second core for the USB communication
     multicore_launch_core1(usb_main);
@@ -324,7 +326,7 @@ int main(void)
         if(usb_rx_cnt > 0UL)
         {
             // Check how much available space in uart_tx_data
-            uint32_t available = UART_TX_DATA_FREE_BYTES();
+            uint32_t available = (MAIN_UART_TX_BUFF - uart_tx_cnt) * sizeof(uartdata_t);
             if(usb_rx_cnt > available)
             {
                 usb_rx_cnt = available;
@@ -336,7 +338,7 @@ int main(void)
             if(usb_rx_cnt > 0UL)
             {
                 memcpy(&uart_tx_data[uart_tx_cnt], usb_rx_data,  usb_rx_cnt);
-                UART_TX_CNT_ADD_BYTES(usb_rx_cnt);
+                uart_tx_cnt += (usb_rx_cnt / sizeof(uartdata_t));
             }
         }
 
@@ -365,13 +367,9 @@ int main(void)
         //----------------------------------------------------------------------
 
         // UART data received?
-#ifdef USE_PIO_UART
-        uint32_t uart_rx_cnt = puart_drv_get_rx(uart_rx_data, MAIN_UART_RX_BUFF);
-        uint32_t uart_rx_bytes = uart_rx_cnt * sizeof(piodata_t);
-#else
-        uint32_t uart_rx_cnt = uart_drv_get_rx(uart_rx_data, MAIN_UART_RX_BUFF);
-        uint32_t uart_rx_bytes = uart_rx_cnt;
-#endif
+        uint32_t uart_rx_cnt = UART_GET_RX(uart_rx_data, MAIN_UART_RX_BUFF);
+        uint32_t uart_rx_bytes = uart_rx_cnt * sizeof(uartdata_t);
+
         if(uart_rx_bytes > 0UL)
         {
             // Check how much available space in usb_tx_data
@@ -396,35 +394,22 @@ int main(void)
         // UART data to send? 
         // To avoid calling memmove for every free byte (this is too expensive)
         // send data to UART driver only if the tx buffer is >= 1/4 free
-#ifdef USE_PIO_UART
+        if((uart_tx_cnt > 0UL) && (UART_GET_TX_FREE_CNT() >= (PUART_TX_BUFF>>2))){
+            uint32_t sent = UART_SEND(uart_tx_data, uart_tx_cnt);
 
-        if((uart_tx_cnt > 0UL) && (puart_drv_get_tx_free_cnt() >= (PUART_TX_BUFF>>2))){
-            uint32_t sent = puart_drv_send_buff(uart_tx_data, uart_tx_cnt);
-#else
-        if((uart_tx_cnt > 0UL) && (uart_drv_get_tx_free_cnt() >= (UART_TX_BUFF>>2))){
-            uint32_t sent = uart_drv_send_buff(uart_tx_data, uart_tx_cnt);
-#endif
             if(sent < uart_tx_cnt)
             {
                 // Could not sent all data? Move the remaining UART tx buffer 
                 // to left to send it next time
                 TP_TGL(TP9);
-#ifdef USE_PIO_UART
-                memmove(&uart_tx_data[0], &uart_tx_data[sent],  (uart_tx_cnt - sent) * sizeof(piodata_t));
-#else
-                memmove(&uart_tx_data[0], &uart_tx_data[sent],  (uart_tx_cnt - sent));
-#endif
+                memmove(&uart_tx_data[0], &uart_tx_data[sent],  (uart_tx_cnt - sent) * sizeof(uartdata_t));
                 uart_tx_cnt -= sent;
             }
             else uart_tx_cnt = 0UL;
         }
 
 #ifdef TX_ACTIVE_ENABLED
-    #ifdef USE_PIO_UART
-        puart_drv_control_tx_active();
-    #else
-        uart_drv_control_tx_active();
-    #endif
+    UART_CONTROL_TX_ACT();
 #endif
         cli_poll();
     }
