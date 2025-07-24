@@ -70,15 +70,5 @@ void puart_drv_control_tx_active(void);
 // Check if there are received characters and copy them to buffer
 uint32_t puart_drv_get_rx(piodata_t * buff, uint32_t buff_max_len);
 
-/*
-// Copy piodata buffer to uint8_t buffer
-void memcpy_piodata_to_uint8(uint8_t * uint8_buff, uint32_t uint8_buff_len, 
-                        const piodata_t * piodata_buff, uint32_t piodata_cnt);
-
-// Copy uint8_t buffer to piodata buffer
-void memcpy_uint8_to_piodata(piodata_t * piodata_buff, uint32_t piodata_buff_len,
-                        const uint8_t * uint8_buff, uint32_t uint8_cnt);
-*/
-
 //******************************************************************************
 #endif /* PUART_DRV_H */

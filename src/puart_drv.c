@@ -37,8 +37,6 @@
 #include "puart_tx.pio.h"
 #include "puart_rx.pio.h"
 
-#include "uart_ascii.h" //!!! TODO: delete
-
 //******************************************************************************
 // Function Prototypes
 //******************************************************************************
@@ -586,75 +584,3 @@ uint32_t puart_drv_get_rx(piodata_t * buff, uint32_t buff_max_len)
     }
     return buff_idx;
 }
-
-/*******************************************************************************
- * @brief Copy piodata buffer to uint8_t buffer:
- *        If piodata_t == uint8_t: the elements are copied one to one
- *        If piodata_t == uint16_t: the elements are copied high byte first:
- *                          high_byte(piodata_t) <-- uint8_t[0]
- *                           low_byte(piodata_t) <-- uint8_t[1]
- * @param uint8_buff [out] pointer to uint8_t buffer where the elements are copied
- * @param uint8_buff_len [in] the size of uint8_buff (in elements)
- * @param piodata_buff [in] pointer to piodata_t buffer from where the elements are copied
- * @param piodata_cnt [in] the count of piodata_t elements to copy
- ******************************************************************************/
-/*
-void memcpy_piodata_to_uint8(uint8_t * uint8_buff, uint32_t uint8_buff_len, 
-                        const piodata_t * piodata_buff, uint32_t piodata_cnt)
-{
-    if(sizeof(piodata_t) == sizeof(uint8_t))
-    {
-        memcpy(uint8_buff, piodata_buff, (piodata_cnt > uint8_buff_len) ? uint8_buff_len : piodata_cnt);
-    }
-    else if(sizeof(piodata_t) >= 2)
-    {
-        while(piodata_cnt && (uint8_buff_len >= sizeof(piodata_t)))
-        {
-            piodata_t piodata_val = *piodata_buff;
-            *uint8_buff = (uint8_t) piodata_val;
-            uint8_buff++;
-            *uint8_buff = (uint8_t) (piodata_val>>8);
-            uint8_buff++;
-            uint8_buff_len -= sizeof(piodata_t);
-            ++piodata_buff;
-            --piodata_cnt;
-        }
-    }
-}
-*/
-/*******************************************************************************
- * @brief Copy uint8_t buffer to piodata buffer
- *        If piodata_t == uint8_t: the elements are copied one to one
- *        If piodata_t == uint16_t: the elements are copied high byte first:
- *                          uint8_t[0] <-- high_byte(piodata_t)
- *                          uint8_t[1] <-- low_byte(piodata_t)
- * @param piodata_buff [out] pointer to piodata_t buffer where the elements are copied
- * @param piodata_buff_len [in] the size of piodata_buff (in elements)
- * @param uint8_buff [in] pointer to uint8_t buffer from where the elements are copied
- * @param uint8_cnt [in] the count of uint8_t elements to copy
- ******************************************************************************/
-/*
-void memcpy_uint8_to_piodata(piodata_t * piodata_buff, uint32_t piodata_buff_len,
-                        const uint8_t * uint8_buff, uint32_t uint8_cnt)
-{
-    if(sizeof(piodata_t) == sizeof(uint8_t))
-    {
-        memcpy(piodata_buff, uint8_buff, (uint8_cnt > piodata_buff_len) ? piodata_buff_len : uint8_cnt);
-    }
-    else if(sizeof(piodata_t) >= 2)
-    {
-        while(piodata_buff_len && (uint8_cnt >= sizeof(piodata_t)))
-        {
-            piodata_t piodata_val = (piodata_t) *uint8_buff;
-            piodata_val <<= 8;
-            uint8_buff++;
-            piodata_val |= (piodata_t) *uint8_buff;
-            uint8_buff++;
-            uint8_cnt -= sizeof(piodata_t);
-            *piodata_buff = piodata_val;
-            ++piodata_buff;
-            --piodata_buff_len;
-        }
-    }
-}
-*/
