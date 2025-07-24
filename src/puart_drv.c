@@ -37,8 +37,6 @@
 #include "puart_tx.pio.h"
 #include "puart_rx.pio.h"
 
-#include "uart_ascii.h" //!!! TODO: delete
-
 //******************************************************************************
 // Function Prototypes
 //******************************************************************************
@@ -68,19 +66,19 @@ static void irq_rx_func(void);
 //   0                   tx_wr_idx           tx_rd_idx            PUART_TX_BUFF
 //                    puart_drv_puts()     puart_drv_irq()
 //
-static char tx_buffer[PUART_TX_BUFF];
+static piodata_t tx_buffer[PUART_TX_BUFF];
 static volatile uint32_t tx_wr_idx = 0UL;
 static volatile uint32_t tx_rd_idx = 0UL;
-static volatile uint32_t tx_free_cnt = sizeof(tx_buffer);
+static volatile uint32_t tx_free_cnt = PUART_TX_BUFF;
 static volatile bool send_semaphore = false;
 
-static char rx_buffer[PUART_RX_BUFF];
+static piodata_t rx_buffer[PUART_RX_BUFF];
 static volatile uint32_t rx_wr_idx = 0UL;
 static volatile uint32_t rx_rd_idx = 0UL;
 static volatile uint32_t rx_wr_old = 0UL;
 static volatile bool read_semaphore = false;
 
-static char rx_buff0[16];
+static piodata_t rx_buff0[PUART_RX_BUFF0];
 static volatile uint32_t rx_idx0 = 0UL;
 static volatile bool rx_buff0_semaphore = false;
 
@@ -96,13 +94,17 @@ static uint irq_idx_rx;
 static int8_t pio_irq_rx;
 
 static int tx_active_status = 0;
-static ustime_t tx_last_byte_ustime;
+static ustime_t tx_last_element_ustime;
 
-static ustime_t byte_req_ustime;
+static ustime_t element_req_ustime;
 
 // Tx Not-Full Interrupt Disable/Enable Macros
 #define PIO_IRQ_TXNFULL_DISABLE()   pio_set_irqn_source_enabled(pio_tx, irq_idx_txnfull, pio_irq_src_txnfull, false)
 #define PIO_IRQ_TXNFULL_ENABLE()    pio_set_irqn_source_enabled(pio_tx, irq_idx_txnfull, pio_irq_src_txnfull, true)
+
+// The received data is left-justified, must be shifted to right.
+// Example: for 9-bit, data must be shifted 23 bits to the right (32 - 9 = 23)
+#define PIO_RX_BIT_SHIFT    (32-PIO_DATA_BIT)
 
 /*******************************************************************************
  * @brief PIO-UART Init function
@@ -111,8 +113,8 @@ void puart_drv_init(void)
 {
     int irq_found_flag;
 
-    // Calculate time necessary to transfer a byte (1 start + PIO_DATA_BIT + 1 stop + 1 reserve)
-    byte_req_ustime = get_baudrate_transfer_ustime(PIO_BAUDRATE, (1 + PIO_DATA_BIT + 1 + 1), 1);
+    // Calculate time necessary to transfer a piodata_t element (1 start + PIO_DATA_BIT + 1 stop + 1 reserve)
+    element_req_ustime = get_baudrate_transfer_ustime(PIO_BAUDRATE, (1 + PIO_DATA_BIT + 1 + 1), 1);
 
     //--------------------------------------------------------------------------
     // Configure TX-PIO
@@ -121,7 +123,7 @@ void puart_drv_init(void)
 
     uint offset = pio_add_program(pio_tx, &puart_tx_program);
     puart_tx_program_init(pio_tx, sm_tx, offset, PUART_TX_PIN, PIO_BAUDRATE);
-    // Send bits_count as first byte to SM
+    // Send bits_count as first data to SM
     pio_tx->txf[sm_tx] = (PIO_DATA_BIT - 1);
 
     // Find a free irq
@@ -162,7 +164,7 @@ void puart_drv_init(void)
 
     offset = pio_add_program(pio_rx, &puart_rx_program);
     puart_rx_program_init(pio_rx, sm_rx, offset, PUART_RX_PIN, PIO_BAUDRATE);
-    // Send bits_count as first byte to SM
+    // Send bits_count as first data to SM
     pio_rx->txf[sm_rx] = (PIO_DATA_BIT - 1);
 
     // Find a free irq
@@ -226,7 +228,7 @@ static inline void _check_wr_jumps_over_rd(void)
     {
         // Jump of write pointer over read pointer detected, data lost
         rx_rd_idx = rx_wr_idx + 1;
-        if(rx_rd_idx >= sizeof(rx_buffer))
+        if(rx_rd_idx >= PUART_RX_BUFF)
             rx_rd_idx = 0UL;
         rx_wr_old = rx_wr_idx;
         PUART_DRV_LOG("PUART RX buffer overflow\r\n");
@@ -234,24 +236,24 @@ static inline void _check_wr_jumps_over_rd(void)
 }
 
 /*******************************************************************************
- * @brief Get the count of available (free) bytes in Tx buffer
- * @return count of free bytes in Tx buffer
+ * @brief Get the count of available (free) elements in Tx buffer
+ * @return count of free elements in Tx buffer
  ******************************************************************************/
 static inline uint32_t get_tx_buff_free_cnt(void)
 {
     // |<------ free ----->|<--- busy for send --->|<------ free ----->|
     // |---- available ----|XXXXXXXXXXXXXXXXXXXXXXX|---- available ----|
-    // 0                tx_rd_idx              tx_wr_idx       sizeof(tx_buffer)
+    // 0                tx_rd_idx              tx_wr_idx       PUART_TX_BUFF
     if(tx_wr_idx > tx_rd_idx)
-        return (sizeof(tx_buffer) - tx_wr_idx + tx_rd_idx);
+        return (PUART_TX_BUFF - tx_wr_idx + tx_rd_idx);
 
         // |<-- busy for send -->|<------ free ----->|<-- busy for send -->|
     // |XXXXXXXXXXXXXXXXXXXXX|---- available ----|XXXXXXXXXXXXXXXXXXXXX|
-    // 0                tx_wr_idx              tx_rd_idx       sizeof(tx_buffer)
+    // 0                tx_wr_idx              tx_rd_idx       PUART_TX_BUFF
     else if(tx_wr_idx < tx_rd_idx)
         return (tx_rd_idx - tx_wr_idx);    
 
-        return sizeof(tx_buffer);
+    return PUART_TX_BUFF;
 }
 
 /*******************************************************************************
@@ -267,7 +269,7 @@ static void irq_rx_func(void)
     {
         for(uint32_t i = 0UL; i < rx_idx0; i++)
         {
-            if(rx_wr_idx >= sizeof(rx_buffer))
+            if(rx_wr_idx >= PUART_RX_BUFF)
                 rx_wr_idx = 0UL;
             rx_buffer[rx_wr_idx++] = rx_buff0[i];
         }
@@ -277,33 +279,39 @@ static void irq_rx_func(void)
 
     while(!pio_sm_is_rx_fifo_empty(pio_rx, sm_rx))
     {
-        // For 8-bit communication
-        //char rx_ch = puart_rx_program_getc(pio_rx, sm_rx);
-
-        // For 9-bit, shift data to right (23 = 32 - 9)
         uint32_t rx_v32 = pio_rx->rxf[sm_rx];
-        char rx_ch = (char) (rx_v32 >> 23);
+        rx_v32 = rx_v32 >> PIO_RX_BIT_SHIFT;
 
-        // Is the interrupt called while reading rx main buffer in uart_drv_get_rx?
+#ifdef PIO_DATA_HBLB
+        // piodata_t = HB,LB
+        uint32_t val_hb_lb = (rx_v32 << 8);
+        val_hb_lb |= (rx_v32 >> 8);
+        piodata_t rx_ch = (piodata_t) (val_hb_lb);
+#else
+        // piodata_t = LB,HB
+        piodata_t rx_ch = (piodata_t) (rx_v32);
+#endif
+
+        // Is the interrupt called while reading rx main buffer in puart_drv_get_rx?
         if(read_semaphore)
         {
             // Yes: Do not access rx main buffer to avoid corrupted data.
             // Instead store data in rx backup buffer (rx_buff0). Both 
             // read_semaphore and rx_buff0_semaphore cannot be set at the same 
             // time. If read_semaphore is set -> it is safe to access rx_buff0.
-            if(rx_idx0 < sizeof(rx_buff0))
+            if(rx_idx0 < PUART_RX_BUFF0)
                 rx_buff0[rx_idx0++] = rx_ch;
             else {
-                // Rx backup buffer (rx_buff0) already full! Received byte lost!
+                // Rx backup buffer (rx_buff0) already full! Received data lost!
                 PUART_DRV_LOG("PUART RX buffer0 full\r\n");
             }
         }
         else{
             // No: It is safe to store data in rx main buffer.
-            if(rx_wr_idx >= sizeof(rx_buffer))
+            if(rx_wr_idx >= PUART_RX_BUFF)
                 rx_wr_idx = 0UL;
             rx_buffer[rx_wr_idx++] = rx_ch;
-            if(rx_wr_idx >= sizeof(rx_buffer))
+            if(rx_wr_idx >= PUART_RX_BUFF)
                 rx_wr_idx = 0UL;
             _check_wr_jumps_over_rd();
         }
@@ -333,7 +341,7 @@ static void irq_txnfull_func(void)
         else if(tx_wr_idx == tx_rd_idx)
         {
             // Tx Buffer is empty
-            tx_free_cnt = sizeof(tx_buffer);
+            tx_free_cnt = PUART_TX_BUFF;
             //TP_TGL(TP8);
             // Disable tx irq
             PIO_IRQ_TXNFULL_DISABLE();
@@ -341,8 +349,20 @@ static void irq_txnfull_func(void)
         }
         // Safe to send the data
         else{
-            pio_tx->txf[sm_tx] = (uint32_t) tx_buffer[tx_rd_idx++];
-            if(tx_rd_idx >= sizeof(tx_buffer))
+
+            uint32_t val = (uint32_t) tx_buffer[tx_rd_idx++];
+
+#ifdef PIO_DATA_HBLB
+            // piodata_t = HB,LB
+            uint32_t val_hb_lb = (val << 8);
+            val_hb_lb |= (val >> 8);
+            pio_tx->txf[sm_tx] = val_hb_lb;
+#else
+            // piodata_t = LB,HB
+            pio_tx->txf[sm_tx] = val;
+#endif
+
+            if(tx_rd_idx >= PUART_TX_BUFF)
                 tx_rd_idx = 0UL;
             // Update Tx Buffer free count
             tx_free_cnt = get_tx_buff_free_cnt();
@@ -354,10 +374,10 @@ static void irq_txnfull_func(void)
 /*******************************************************************************
  * @brief Send data to PIO-UART
  * @param buff [in] data to send to PIO-UART
- * @param len [in] count of bytes in buff to send to PIO-UART
- * @return count of copied bytes
+ * @param len [in] count of elements in buff to send to PIO-UART
+ * @return count of copied elements
  ******************************************************************************/
-uint32_t puart_drv_send_buff(const uint8_t * buff, uint32_t len)
+uint32_t puart_drv_send_buff(const piodata_t * buff, uint32_t len)
 {
     if((buff == NULL) || (len == 0UL))
         return 0UL;
@@ -370,7 +390,7 @@ uint32_t puart_drv_send_buff(const uint8_t * buff, uint32_t len)
 
     send_semaphore = true;
 
-    if(tx_wr_idx >= sizeof(tx_buffer))
+    if(tx_wr_idx >= PUART_TX_BUFF)
         tx_wr_idx = 0UL;
 
     uint32_t available = 0UL;
@@ -381,10 +401,10 @@ uint32_t puart_drv_send_buff(const uint8_t * buff, uint32_t len)
 
     // |<------ free ----->|<--- busy for send --->|<------ free ----->|
     // |---- available ----|XXXXXXXXXXXXXXXXXXXXXXX|---- available ----|
-    // 0                tx_rd_idx              tx_wr_idx       sizeof(tx_buffer)
+    // 0                tx_rd_idx              tx_wr_idx       PUART_TX_BUFF
     if(tx_wr_idx >= tx_rd_idx)
     {
-        available = sizeof(tx_buffer) - tx_wr_idx;
+        available = PUART_TX_BUFF - tx_wr_idx;
         // tx_wr_idx should remain behind tx_rd_idx (otherwise we lose data)
         if((tx_rd_idx == 0) && (available > 0))
             available -= 1;
@@ -393,11 +413,11 @@ uint32_t puart_drv_send_buff(const uint8_t * buff, uint32_t len)
             to_copy = available;
         if(to_copy > 0)
         {
-            memcpy(&tx_buffer[tx_wr_idx], buff, to_copy);
+            memcpy(&tx_buffer[tx_wr_idx], buff, to_copy * sizeof(piodata_t));
             len -= to_copy;
             copied += to_copy;
             tx_wr_idx += to_copy;
-            if(tx_wr_idx >= sizeof(tx_buffer))
+            if(tx_wr_idx >= PUART_TX_BUFF)
                 tx_wr_idx = 0UL;
         }
 
@@ -408,7 +428,7 @@ uint32_t puart_drv_send_buff(const uint8_t * buff, uint32_t len)
 
     // |<-- busy for send -->|<------ free ----->|<-- busy for send -->|
     // |XXXXXXXXXXXXXXXXXXXXX|---- available ----|XXXXXXXXXXXXXXXXXXXXX|
-    // 0                tx_wr_idx              tx_rd_idx       sizeof(tx_buffer)
+    // 0                tx_wr_idx              tx_rd_idx       PUART_TX_BUFF
     if((len > 0UL) && (tx_wr_idx < tx_rd_idx))
     {
         available = tx_rd_idx - tx_wr_idx;
@@ -419,10 +439,10 @@ uint32_t puart_drv_send_buff(const uint8_t * buff, uint32_t len)
             to_copy = available;
         if(to_copy > 0)
         {
-            memcpy(&tx_buffer[tx_wr_idx], &buff[copied], to_copy);
+            memcpy(&tx_buffer[tx_wr_idx], &buff[copied], to_copy * sizeof(piodata_t));
             copied += to_copy;
             tx_wr_idx += to_copy;
-            if(tx_wr_idx >= sizeof(tx_buffer))
+            if(tx_wr_idx >= PUART_TX_BUFF)
                 tx_wr_idx = 0UL;
         }
 
@@ -441,8 +461,8 @@ uint32_t puart_drv_send_buff(const uint8_t * buff, uint32_t len)
 }
 
 /*******************************************************************************
- * @brief Get the free size of Tx buffer
- * @return count of bytes still free in Tx buffer
+ * @brief Get the free size (in elements count) of Tx buffer
+ * @return count of elements still free in Tx buffer
  ******************************************************************************/
 uint32_t puart_drv_get_tx_free_cnt(void)
 {
@@ -464,14 +484,14 @@ void puart_drv_control_tx_active(void)
                 // Check if TX-FIFO is empty
                 if((pio_tx->flevel & PIO_FLEVEL_TX0_BITS) == 0)
                 {
-                    // Goto status 2 where we wait for the last byte to be sent
+                    // Goto status 2 where we wait for the last element to be sent
                     tx_active_status = 2;
-                    tx_last_byte_ustime = get_sys_ustime();
+                    tx_last_element_ustime = get_sys_ustime();
                 }
             }
             else {
-                // Check if last byte was sent (time elapsed requited to send one byte)
-                if(get_diff_sys_ustime(tx_last_byte_ustime) >= byte_req_ustime)
+                // Check if last element was sent (time elapsed requited to send one element)
+                if(get_diff_sys_ustime(tx_last_element_ustime) >= element_req_ustime)
                 {
                     tx_active_status = 0;
                     PUART_TX_ACTIVE_SIGNAL_CLR();
@@ -482,12 +502,12 @@ void puart_drv_control_tx_active(void)
 }
 
 /*******************************************************************************
- * @brief Check if there are received characters and copy them to buffer
- * @param buff [out] pointer to buffer where the received characters are copied
- * @param buff_max_len [in] the length in bytes (characters) of buff
- * @return count of copied received characters
+ * @brief Check if there are received elements and copy them to buffer
+ * @param buff [out] pointer to buffer where the received elements are copied
+ * @param buff_max_len [in] the maximal size of buff (in elements)
+ * @return count of copied received elements
  ******************************************************************************/
-uint32_t puart_drv_get_rx(char * buff, uint32_t buff_max_len)
+uint32_t puart_drv_get_rx(piodata_t * buff, uint32_t buff_max_len)
 {
     uint32_t buff_idx = 0UL;
 
@@ -503,7 +523,7 @@ uint32_t puart_drv_get_rx(char * buff, uint32_t buff_max_len)
         // Copy as much as possible from 
         if(rx_idx0 > buff_max_len)
             rx_idx0 = buff_max_len;
-        memcpy(buff, rx_buff0, rx_idx0);
+        memcpy(buff, rx_buff0, rx_idx0 * sizeof(piodata_t));
         buff_max_len -= rx_idx0;
         buff_idx += rx_idx0;
         rx_idx0 = 0UL;
@@ -517,32 +537,32 @@ uint32_t puart_drv_get_rx(char * buff, uint32_t buff_max_len)
         // Start semaphore: protect: rx_rd_idx, rx_wr_idx, rx_buffer
         read_semaphore = true;
 
-        if(rx_rd_idx >= sizeof(rx_buffer))
+        if(rx_rd_idx >= PUART_RX_BUFF)
             rx_rd_idx = 0UL;
 
         // |............|............|//////////////|
         // |            |            |<--- copy --->|
-        // 0        rx_wr_idx    rx_rd_idx     sizeof(rx_buffer)
+        // 0        rx_wr_idx    rx_rd_idx     PUART_RX_BUFF
         if(rx_rd_idx > rx_wr_idx)
         {
-            uint32_t diff = sizeof(rx_buffer) - rx_rd_idx;
+            uint32_t diff = PUART_RX_BUFF - rx_rd_idx;
             if(diff > buff_max_len)
                 diff = buff_max_len;
 
             if(diff > 0UL)
             {
-                memcpy(&buff[buff_idx], &rx_buffer[rx_rd_idx], diff);
+                memcpy(&buff[buff_idx], &rx_buffer[rx_rd_idx], diff * sizeof(piodata_t));
                 buff_max_len -= diff;
                 buff_idx += diff;
                 rx_rd_idx += diff;
-                if(rx_rd_idx >= sizeof(rx_buffer))
+                if(rx_rd_idx >= PUART_RX_BUFF)
                     rx_rd_idx = 0UL;
             }
         }
 
         // |..........|//////////////|.............|
         // |          |<--- copy --->|             |
-        // 0       rx_rd_idx      rx_wr_idx    sizeof(rx_buffer)
+        // 0       rx_rd_idx      rx_wr_idx    PUART_RX_BUFF
         if(rx_rd_idx < rx_wr_idx)
         {
             uint32_t diff = rx_wr_idx - rx_rd_idx;
@@ -551,11 +571,11 @@ uint32_t puart_drv_get_rx(char * buff, uint32_t buff_max_len)
 
             if(diff > 0UL)
             {
-                memcpy(&buff[buff_idx], &rx_buffer[rx_rd_idx], diff);
+                memcpy(&buff[buff_idx], &rx_buffer[rx_rd_idx], diff * sizeof(piodata_t));
                 buff_max_len -= diff;
                 buff_idx += diff;
                 rx_rd_idx += diff;
-                if(rx_rd_idx >= sizeof(rx_buffer))
+                if(rx_rd_idx >= PUART_RX_BUFF)
                     rx_rd_idx = 0UL;
             }
         }

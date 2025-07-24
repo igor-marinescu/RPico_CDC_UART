@@ -25,6 +25,7 @@ add_compile_definitions(PUART_DRV_DEBUG)
 add_compile_definitions(USE_PIO_UART)
 add_compile_definitions(PIO_BAUDRATE=115200)
 add_compile_definitions(PIO_DATA_BIT=9)
+add_compile_definitions(PIO_DATA_HBLB)
 
 # TX-ACTIVE Output Signal
 add_compile_definitions(TX_ACTIVE_ENABLED)

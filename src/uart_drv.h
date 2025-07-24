@@ -75,7 +75,7 @@ uint32_t uart_drv_get_tx_free_cnt(void);
 void uart_drv_control_tx_active(void);
 
 // Check if there are received characters and copy them to buffer
-uint32_t uart_drv_get_rx(char * buff, uint32_t buff_max_len);
+uint32_t uart_drv_get_rx(uint8_t * buff, uint32_t buff_max_len);
 
 //******************************************************************************
 #endif /* UART_DRV_H */
