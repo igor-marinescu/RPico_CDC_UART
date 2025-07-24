@@ -20,13 +20,14 @@ import time
 import sys
 import argparse
 import os.path
+import random
 
 #-------------------------------------------------------------------------------
 # Default Configuration
 BAUDRATE = 115200
 TEST_RANGE_FROM = 1
 TEST_RANGE_TO = 2050
-MIN_TIMEOUT_S = 0.05
+MIN_TIMEOUT_S = 0.01
 BIT_CNT = 9
 DATA_HBLB = True
 
@@ -44,47 +45,88 @@ def hex_dump(b):
         print(text_line)
 
 #-------------------------------------------------------------------------------
-def create_test_data(len):
+def create_test_data(elements_cnt):
     """ Create a template of test data
     """
     if BIT_CNT > 8:
-        test_data = bytearray(len * 2)
-        for i in range(len):
+        test_data = bytearray(elements_cnt * 2)
+        for i in range(elements_cnt):
             if DATA_HBLB:
                 test_data[(i * 2) + 0] = i % 2
-                test_data[(i * 2) + 1] = (i + len) % 256
+                test_data[(i * 2) + 1] = (i + elements_cnt) % 256
             else:
-                test_data[(i * 2) + 0] = (i + len) % 256
+                test_data[(i * 2) + 0] = (i + elements_cnt) % 256
                 test_data[(i * 2) + 1] = i % 2
         return test_data
     
-    test_data = bytearray(len)
-    for i in range(len):
-        test_data[i] = (i + len) % 256
+    test_data = bytearray(elements_cnt)
+    for i in range(elements_cnt):
+        test_data[i] = (i + elements_cnt) % 256
     return test_data
 
 #-------------------------------------------------------------------------------
-def  calculate_send_time(bit_cnt, frame_cnt):
+def  calculate_send_time(bit_cnt, elements_cnt):
     """ Calculate time required to send data:
         1 bit = 1/BAUDRATE
         1 frame = 1 start + bit_cnt + 1 stop = (2 + bit_cnt)/BAUDRATE
-        frame_cnt frames = ((2 + bit_cnt)/BAUDRATE) * frame_cnt
+        elements_cnt frames = ((2 + bit_cnt)/BAUDRATE) * elements_cnt
         Add a 1.5 factor as reserve and limit the minimal time to 50ms
     """
-    send_time = ((2.0 + bit_cnt)/BAUDRATE) * (frame_cnt) * 1.5
+    send_time = ((2.0 + bit_cnt)/BAUDRATE) * (elements_cnt) * 1.5
     if send_time < MIN_TIMEOUT_S:
         send_time = MIN_TIMEOUT_S
     return send_time
+
+#-------------------------------------------------------------------------------
+def dev_send_receive(test_txt_prefix, dev_tx, dev_rx, elements_cnt, no_check):
+    """ Create a buffer of test-data of size bytes_count and send it on dev_tx.
+        Receive data using dev_rx, if flag no_check is 0, check if the data
+        sent is the same as data received."""
+
+    test_data = create_test_data(elements_cnt)
+
+    dev_tx.write(test_data)
+    dev_tx.flush()
+    time.sleep(calculate_send_time(BIT_CNT, elements_cnt))
+
+    # Calculate expected count of data to be received (based on bit count)
+    # Add a reserve of 4 bytes for the buffer size
+    max_rx_bytes = (elements_cnt + 4)
+    rx_bytes_expect = elements_cnt
+    if BIT_CNT > 8:
+        max_rx_bytes = max_rx_bytes * 2
+        rx_bytes_expect = rx_bytes_expect * 2
+
+    rx_bytes = dev_rx.read(max_rx_bytes)
+
+    # Intentionally inject an error (to test if we detect it)
+    #if bytes_count == 30:
+    #    test_data[10] = 0
+
+    if no_check == 0:
+
+        if (len(rx_bytes) == rx_bytes_expect) and (rx_bytes == test_data):
+            print('{} {:5d}: Ok'.format(test_txt_prefix, elements_cnt))
+        else:
+            print('{} {:5d}: Failed'.format(test_txt_prefix, elements_cnt))
+            print('Sent {:d} bytes:'.format(len(test_data)))
+            hex_dump(test_data)
+            print('Received {:d} bytes:'.format(len(rx_bytes)))
+            hex_dump(rx_bytes)
+            return False
+    else:
+            print('{} {:5d}: (no check)'.format(test_txt_prefix, elements_cnt))
+    return True
 
 #-------------------------------------------------------------------------------
 # Command line parser
 parser = argparse.ArgumentParser(prog='test.py',
             description='Test RPico_CDC_UART firmware.')
 
-parser.add_argument('tx_dev',
-            help='Device that sends data, ex: /dev/ttyUSB0 (USB-UART converter), /dev/ttyACM0 (TinyUSB)')
-parser.add_argument('rx_dev',
-            help='Device that receives data, ex: /dev/ttyUSB0 (USB-UART converter), /dev/ttyACM0 (TinyUSB)')
+parser.add_argument('dev1',
+            help='Serial Device 1 (Ex: /dev/ttyUSB0 for USB-UART converter, /dev/ttyACM0 for TinyUSB')
+parser.add_argument('dev2',
+            help='Serial Device 2 (Ex: /dev/ttyUSB0 for USB-UART converter, /dev/ttyACM0 for TinyUSB')
 parser.add_argument('-b', '--baudrate', default=BAUDRATE, type=int, dest='baudrate',
             help='Baudrate (default: %(default)s)')
 parser.add_argument('-f', '--from', default=TEST_RANGE_FROM, type=int, dest='from_value',
@@ -93,14 +135,16 @@ parser.add_argument('-t', '--to', default=TEST_RANGE_TO, type=int, dest='to_valu
             help='Test range to (default: %(default)s)')
 parser.add_argument('-n', '--no-check', default=0, type=int, dest='no_check',
             help='Do not check the result (default: %(default)s)')
+parser.add_argument('-m', '--test-mode', default=0, type=int, dest='test_mode',
+            help='Test mode: 0=normal, 1=tx,rx,tx,rx.., 2=random(tx/rx), 3=random(pack_len) (default: %(default)s)')
 
 args = parser.parse_args()
 
-# Check if send and receive devices exists
-if not os.path.exists(args.tx_dev):
-    parser.error(f"Send device (tx_dev) not found: {args.tx_dev} ")
-if not os.path.exists(args.rx_dev):
-    parser.error(f"Receive device (rx_dev) not found: {args.rx_dev} ")
+# Check if serial devices exist
+if not os.path.exists(args.dev1):
+    parser.error(f"Device 1 (dev1) not found: {args.dev1} ")
+if not os.path.exists(args.dev2):
+    parser.error(f"Device 2 (dev2) not found: {args.dev2} ")
 
 if (args.from_value < 1) or (args.to_value > TEST_RANGE_TO) or (args.to_value < args.from_value):
     parser.error(f"FROM_VALUE and TO_VALUE must be between {TEST_RANGE_FROM} and {TEST_RANGE_TO}")
@@ -108,64 +152,60 @@ if (args.from_value < 1) or (args.to_value > TEST_RANGE_TO) or (args.to_value < 
 BAUDRATE = args.baudrate
 TEST_RANGE_FROM = args.from_value
 TEST_RANGE_TO = args.to_value
-TX_DEV = args.tx_dev
-RX_DEV = args.rx_dev
+dev1_name = args.dev1
+dev2_name = args.dev2
 
-print("Tx Device:", TX_DEV)
-print("Rx device:", RX_DEV)
+print("Device 1:", dev1_name)
+print("Device 2:", dev2_name)
 print("Baudrate:", BAUDRATE)
 print("From:", TEST_RANGE_FROM)
 print("To:", TEST_RANGE_TO)
 
-TEST_PREFIX = TX_DEV + "->" + RX_DEV
-
 #-------------------------------------------------------------------------------
 # Test Code
 
-ser_tx = serial.Serial(TX_DEV, BAUDRATE)
-ser_rx = serial.Serial(RX_DEV, BAUDRATE, timeout=0)
+dev1 = serial.Serial(dev1_name, BAUDRATE, timeout=0)
+dev2 = serial.Serial(dev2_name, BAUDRATE, timeout=0)
 
 # Give time (~10ms) to pico to configure the UART interface
 time.sleep(0.01)
 
+test_passed = True
 for i in range(TEST_RANGE_FROM, TEST_RANGE_TO):
 
+    # Default dev1->dev2
+    dev_tx, dev_rx = dev1, dev2
+    dev_tx_name, dev_rx_name = dev1_name, dev2_name
+    elements_count = i
 
-    test_data = create_test_data(i)
+    # Test Mode 1: dev1->dev2, dev2->dev1, dev1->dev2, dev2->dev1, ...
+    if args.test_mode == 1:
+        if i % 2:
+            dev_tx, dev_rx = dev2, dev1
+            dev_tx_name, dev_rx_name = dev2_name, dev1_name
 
-    ser_tx.write(test_data)
-    ser_tx.flush()
-    time.sleep(calculate_send_time(BIT_CNT, i))
+    # Test Mode 2: random(dev1, dev2)
+    elif args.test_mode == 2:
+        if random.randint(1, 10) > 5:
+            dev_tx, dev_rx = dev2, dev1
+            dev_tx_name, dev_rx_name = dev2_name, dev1_name
 
-    MAX_RX_BUFFER = TEST_RANGE_TO
-    if BIT_CNT > 8:
-        MAX_RX_BUFFER = MAX_RX_BUFFER * 2
-    rx_bytes = ser_rx.read(MAX_RX_BUFFER)
+    # Test Mode 3: random(pack_len)
+    elif args.test_mode == 3:
+        elements_count = random.randrange(1, TEST_RANGE_TO)
 
-    rx_len_expect = i
-    if BIT_CNT > 8:
-        rx_len_expect = rx_len_expect * 2
+    # Test Mode 4: random(ser_tx, ser_rx) & random(ser_tx, ser_rx)
+    elif args.test_mode == 4:
+        elements_count = random.randrange(1, TEST_RANGE_TO)
+        if random.randint(1, 10) > 5:
+            dev_tx, dev_rx = dev2, dev1
+            dev_tx_name, dev_rx_name = dev2_name, dev1_name
 
-    # Intentionally inject an error (to test if we detect it)
-    #if i == 30:
-    #    test_data[10] = 0
+    test_txt_prefix = '{:5d} {}->{}'.format(i, dev_tx_name, dev_rx_name)
+    if not dev_send_receive(test_txt_prefix, dev_tx, dev_rx, elements_count, args.no_check):
+        test_passed = False
+        break
 
-    if args.no_check == 0:
-
-        if (len(rx_bytes) == rx_len_expect) and (rx_bytes == test_data):
-            #sys.stdout.write('{} {:5d} ({:02X}): Ok \r'.format(TEST_PREFIX, i, i))
-            #sys.stdout.flush()
-            print('{} {:5d} ({:02X}): Ok'.format(TEST_PREFIX, i, i))
-        else:
-            print('{} {:5d} ({:02X}): Failed'.format(TEST_PREFIX, i, i))
-            print('Sent {:d} bytes:'.format(len(test_data)))
-            hex_dump(test_data)
-            print('Received {:d} bytes:'.format(len(rx_bytes)))
-            hex_dump(rx_bytes)
-            break
-    else:
-            print('{} {:5d} ({:02X}): (no check)'.format(TEST_PREFIX, i, i))
-
-ser_tx.close()
-ser_rx.close()
-print("End of test")
+dev1.close()
+dev2.close()
+print("End of test. Test passed:", test_passed)
