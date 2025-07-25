@@ -48,9 +48,6 @@
     #define UART_DRV_LOG(...)    
 #endif  
 
-#define UART_TX_ACTIVE_SIGNAL_SET()    TP_SET(TP6)
-#define UART_TX_ACTIVE_SIGNAL_CLR()    TP_CLR(TP6)
-
 typedef struct {
     unsigned int bit_rate;
     unsigned int stop_bits; // 1, 2

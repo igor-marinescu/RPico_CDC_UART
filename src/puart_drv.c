@@ -106,6 +106,19 @@ static ustime_t element_req_ustime;
 // Example: for 9-bit, data must be shifted 23 bits to the right (32 - 9 = 23)
 #define PIO_RX_BIT_SHIFT    (32-PIO_DATA_BIT)
 
+#ifdef TX_ACTIVE_SIGNAL
+    #ifdef TX_ACTIVE_SIGNAL_INVERTED
+        #define PIO_TX_ACTIVE_SIGNAL_ON()   gpio_put(TX_ACTIVE_SIGNAL, 0)
+        #define PIO_TX_ACTIVE_SIGNAL_OFF()  gpio_put(TX_ACTIVE_SIGNAL, 1)
+    #else
+        #define PIO_TX_ACTIVE_SIGNAL_ON()   gpio_put(TX_ACTIVE_SIGNAL, 1)
+        #define PIO_TX_ACTIVE_SIGNAL_OFF()  gpio_put(TX_ACTIVE_SIGNAL, 0)
+    #endif
+#else
+    #define PIO_TX_ACTIVE_SIGNAL_ON()
+    #define PIO_TX_ACTIVE_SIGNAL_OFF()
+#endif
+
 /*******************************************************************************
  * @brief PIO-UART Init function
  ******************************************************************************/
@@ -115,6 +128,14 @@ void puart_drv_init(void)
 
     // Calculate time necessary to transfer a piodata_t element (1 start + PIO_DATA_BIT + 1 stop + 1 reserve)
     element_req_ustime = get_baudrate_transfer_ustime(PIO_BAUDRATE, (1 + PIO_DATA_BIT + 1 + 1), 1);
+
+    //--------------------------------------------------------------------------
+    // Configure Tx-Active Signal
+#ifdef TX_ACTIVE_SIGNAL
+    gpio_init(TX_ACTIVE_SIGNAL);
+    gpio_set_dir(TX_ACTIVE_SIGNAL, GPIO_OUT);
+    PIO_TX_ACTIVE_SIGNAL_OFF();
+#endif
 
     //--------------------------------------------------------------------------
     // Configure TX-PIO
@@ -324,8 +345,6 @@ static void irq_rx_func(void)
  ******************************************************************************/
 static void irq_txnfull_func(void)
 {
-    TP_TGL(TP7);
-
     while(!pio_sm_is_tx_fifo_full(pio_tx, sm_tx))
     {
         // Is the interrupt called while in send function?
@@ -342,7 +361,6 @@ static void irq_txnfull_func(void)
         {
             // Tx Buffer is empty
             tx_free_cnt = PUART_TX_BUFF;
-            //TP_TGL(TP8);
             // Disable tx irq
             PIO_IRQ_TXNFULL_DISABLE();
             break;
@@ -383,10 +401,8 @@ uint32_t puart_drv_send_buff(const piodata_t * buff, uint32_t len)
         return 0UL;
 
     // TX-ACTIVE Signal Control
-    #ifdef TX_ACTIVE_ENABLED
-        tx_active_status = 1;
-        PUART_TX_ACTIVE_SIGNAL_SET();
-    #endif
+    tx_active_status = 1;
+    PIO_TX_ACTIVE_SIGNAL_ON();
 
     send_semaphore = true;
 
@@ -494,7 +510,7 @@ void puart_drv_control_tx_active(void)
                 if(get_diff_sys_ustime(tx_last_element_ustime) >= element_req_ustime)
                 {
                     tx_active_status = 0;
-                    PUART_TX_ACTIVE_SIGNAL_CLR();
+                    PIO_TX_ACTIVE_SIGNAL_OFF();
                 }
             }
         }

@@ -401,15 +401,14 @@ int main(void)
             {
                 // Could not sent all data? Move the remaining UART tx buffer 
                 // to left to send it next time
-                TP_TGL(TP9);
                 memmove(&uart_tx_data[0], &uart_tx_data[sent],  (uart_tx_cnt - sent) * sizeof(uartdata_t));
                 uart_tx_cnt -= sent;
             }
             else uart_tx_cnt = 0UL;
         }
 
-#ifdef TX_ACTIVE_ENABLED
-    UART_CONTROL_TX_ACT();
+#ifdef TX_ACTIVE_SIGNAL
+        UART_CONTROL_TX_ACT();
 #endif
         cli_poll();
     }

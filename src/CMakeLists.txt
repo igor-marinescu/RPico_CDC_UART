@@ -28,7 +28,8 @@ add_compile_definitions(PIO_DATA_BIT=9)
 add_compile_definitions(PIO_DATA_HBLB)
 
 # TX-ACTIVE Output Signal
-add_compile_definitions(TX_ACTIVE_ENABLED)
+add_compile_definitions(TX_ACTIVE_SIGNAL=28)
+#add_compile_definitions(TX_ACTIVE_SIGNAL_INVERTED)
 
 # Don't allow USB to send small packets for each received UART byte.
 # Send UART->USB when no further data is received from UART for more than 

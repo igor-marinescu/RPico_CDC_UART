@@ -78,11 +78,32 @@ static volatile bool rx_buff0_semaphore = false;
 static uart_line_coding_t line_coding;
 static int tx_active_status = 0;
 
+#ifdef TX_ACTIVE_SIGNAL
+    #ifdef TX_ACTIVE_SIGNAL_INVERTED
+        #define UART_TX_ACTIVE_SIGNAL_ON()   gpio_put(TX_ACTIVE_SIGNAL, 0)
+        #define UART_TX_ACTIVE_SIGNAL_OFF()  gpio_put(TX_ACTIVE_SIGNAL, 1)
+    #else
+        #define UART_TX_ACTIVE_SIGNAL_ON()   gpio_put(TX_ACTIVE_SIGNAL, 1)
+        #define UART_TX_ACTIVE_SIGNAL_OFF()  gpio_put(TX_ACTIVE_SIGNAL, 0)
+    #endif
+#else
+    #define UART_TX_ACTIVE_SIGNAL_ON()
+    #define UART_TX_ACTIVE_SIGNAL_OFF()
+#endif
+
 /*******************************************************************************
  * @brief UART Init function
  ******************************************************************************/
 void uart_drv_init(const uart_line_coding_t * ptr_line_coding)
 {
+    //--------------------------------------------------------------------------
+    // Configure Tx-Active Signal
+#ifdef TX_ACTIVE_SIGNAL
+    gpio_init(TX_ACTIVE_SIGNAL);
+    gpio_set_dir(TX_ACTIVE_SIGNAL, GPIO_OUT);
+    UART_TX_ACTIVE_SIGNAL_OFF();
+#endif
+
     memcpy(&line_coding, ptr_line_coding, sizeof(line_coding));
 
     //uart_deinit(UART_ID);
@@ -181,8 +202,6 @@ static inline uint32_t get_tx_buff_free_cnt(void)
  ******************************************************************************/
 void uart_drv_irq()
 {
-    TP_TGL(TP7);
-
     rx_wr_old = rx_wr_idx;
 
     // In case we have some data collected in rx backup buffer (rx_buff0), 
@@ -244,7 +263,6 @@ void uart_drv_irq()
         {
             // Tx Buffer is empty
             tx_free_cnt = sizeof(tx_buffer);
-            //TP_TGL(TP8);
             // Disable tx irq
             uart_set_irq_enables(UART_ID, true, false);
             break;
@@ -273,10 +291,8 @@ uint32_t uart_drv_send_buff(const uint8_t * buff, uint32_t len)
         return 0UL;
 
     // TX-ACTIVE Signal Control
-    #ifdef TX_ACTIVE_ENABLED
-        tx_active_status = 1;
-        UART_TX_ACTIVE_SIGNAL_SET();
-    #endif
+    tx_active_status = 1;
+    UART_TX_ACTIVE_SIGNAL_ON();
 
     send_semaphore = true;
 
@@ -371,7 +387,7 @@ void uart_drv_control_tx_active(void)
         && ((uart_get_hw(UART_ID)->fr & UART_UARTFR_BUSY_BITS) == 0))
         {
             tx_active_status = 0;
-            UART_TX_ACTIVE_SIGNAL_CLR();
+            UART_TX_ACTIVE_SIGNAL_OFF();
         }
     }
 }

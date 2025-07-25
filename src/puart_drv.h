@@ -46,9 +46,6 @@
     #define PUART_DRV_LOG(...)    
 #endif  
 
-#define PUART_TX_ACTIVE_SIGNAL_SET()    TP_SET(TP6)
-#define PUART_TX_ACTIVE_SIGNAL_CLR()    TP_CLR(TP6)
-
 typedef uint16_t piodata_t;
 
 //******************************************************************************
