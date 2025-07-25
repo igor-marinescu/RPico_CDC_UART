@@ -78,7 +78,7 @@ def  calculate_send_time(bit_cnt, elements_cnt):
     return send_time
 
 #-------------------------------------------------------------------------------
-def dev_send_receive(test_txt_prefix, dev_tx, dev_rx, elements_cnt, no_check):
+def dev_send_receive(test_text, dev_tx, dev_rx, elements_cnt, no_check):
     """ Create a buffer of test-data of size bytes_count and send it on dev_tx.
         Receive data using dev_rx, if flag no_check is 0, check if the data
         sent is the same as data received."""
@@ -100,23 +100,29 @@ def dev_send_receive(test_txt_prefix, dev_tx, dev_rx, elements_cnt, no_check):
     rx_bytes = dev_rx.read(max_rx_bytes)
 
     # Intentionally inject an error (to test if we detect it)
-    #if bytes_count == 30:
+    #if elements_cnt == 30:
     #    test_data[10] = 0
 
     if no_check == 0:
 
-        if (len(rx_bytes) == rx_bytes_expect) and (rx_bytes == test_data):
-            print('{} {:5d}: Ok'.format(test_txt_prefix, elements_cnt))
-        else:
-            print('{} {:5d}: Failed'.format(test_txt_prefix, elements_cnt))
+        if (len(rx_bytes) != rx_bytes_expect) or (rx_bytes != test_data):
+            print(test_text, '<-- Failed')
             print('Sent {:d} bytes:'.format(len(test_data)))
             hex_dump(test_data)
             print('Received {:d} bytes:'.format(len(rx_bytes)))
             hex_dump(rx_bytes)
             return False
-    else:
-            print('{} {:5d}: (no check)'.format(test_txt_prefix, elements_cnt))
+
+    #print('{} {:5d}: Ok'.format(test_txt_prefix, elements_cnt))
     return True
+
+#-------------------------------------------------------------------------------
+def generate_progress_bar(from_val, to_val, current_val):
+    """ Generate a progress bar """
+    prc = int(((current_val - from_val) * 100) / (to_val - from_val));
+    idx = int(((current_val - from_val) * 40) / (to_val - from_val));
+    txt = '[' + '#'*idx + '_'*(40 - idx) + ']'
+    return ' {:3d}% {}'.format(prc, txt);
 
 #-------------------------------------------------------------------------------
 # Command line parser
@@ -136,7 +142,7 @@ parser.add_argument('-t', '--to', default=TEST_RANGE_TO, type=int, dest='to_valu
 parser.add_argument('-n', '--no-check', default=0, type=int, dest='no_check',
             help='Do not check the result (default: %(default)s)')
 parser.add_argument('-m', '--test-mode', default=0, type=int, dest='test_mode',
-            help='Test mode: 0=normal, 1=tx,rx,tx,rx.., 2=random(tx/rx), 3=random(pack_len) (default: %(default)s)')
+            help='Test mode: 0=D1->D2, 1=D1/D2, 2=rand(D1/D2), 3=rand(pack_len), 4=rand(D1/D2,pack_len) (default: %(default)s)')
 
 args = parser.parse_args()
 
@@ -158,8 +164,9 @@ dev2_name = args.dev2
 print("Device 1:", dev1_name)
 print("Device 2:", dev2_name)
 print("Baudrate:", BAUDRATE)
-print("From:", TEST_RANGE_FROM)
-print("To:", TEST_RANGE_TO)
+print("From:", TEST_RANGE_FROM, "To:", TEST_RANGE_TO)
+print("No check:", args.no_check)
+print("Test Mode:", args.test_mode)
 
 #-------------------------------------------------------------------------------
 # Test Code
@@ -171,7 +178,7 @@ dev2 = serial.Serial(dev2_name, BAUDRATE, timeout=0)
 time.sleep(0.01)
 
 test_passed = True
-for i in range(TEST_RANGE_FROM, TEST_RANGE_TO):
+for i in range(TEST_RANGE_FROM, TEST_RANGE_TO + 1):
 
     # Default dev1->dev2
     dev_tx, dev_rx = dev1, dev2
@@ -190,22 +197,33 @@ for i in range(TEST_RANGE_FROM, TEST_RANGE_TO):
             dev_tx, dev_rx = dev2, dev1
             dev_tx_name, dev_rx_name = dev2_name, dev1_name
 
-    # Test Mode 3: random(pack_len)
+    # Test Mode 3: random(packet_len)
     elif args.test_mode == 3:
         elements_count = random.randrange(1, TEST_RANGE_TO)
 
-    # Test Mode 4: random(ser_tx, ser_rx) & random(ser_tx, ser_rx)
+    # Test Mode 4: random(dev1, dev2) & random(packet_len)
     elif args.test_mode == 4:
         elements_count = random.randrange(1, TEST_RANGE_TO)
         if random.randint(1, 10) > 5:
             dev_tx, dev_rx = dev2, dev1
             dev_tx_name, dev_rx_name = dev2_name, dev1_name
 
-    test_txt_prefix = '{:5d} {}->{}'.format(i, dev_tx_name, dev_rx_name)
-    if not dev_send_receive(test_txt_prefix, dev_tx, dev_rx, elements_count, args.no_check):
+    # Display progress bar
+    progress = generate_progress_bar(TEST_RANGE_FROM, TEST_RANGE_TO, i)
+    txt_test = '{} {:5d} {}->{} (pack.size: {})'.format(progress, i, dev_tx_name, dev_rx_name, elements_count)
+    print(txt_test, sep=' ', end='\r', flush=True)
+
+    # Execute test
+    if not dev_send_receive(txt_test, dev_tx, dev_rx, elements_count, args.no_check):
         test_passed = False
         break
 
 dev1.close()
 dev2.close()
-print("End of test. Test passed:", test_passed)
+
+print()
+print("End of test, Result:", test_passed)
+
+if not test_passed:
+    sys.exit(1)
+sys.exit()
