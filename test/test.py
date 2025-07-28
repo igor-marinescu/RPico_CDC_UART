@@ -72,7 +72,7 @@ def  calculate_send_time(bit_cnt, elements_cnt):
         elements_cnt frames = ((2 + bit_cnt)/BAUDRATE) * elements_cnt
         Add a 1.5 factor as reserve and limit the minimal time to 50ms
     """
-    send_time = ((2.0 + bit_cnt)/BAUDRATE) * (elements_cnt) * 1.5
+    send_time = ((2.0 + bit_cnt)/BAUDRATE) * (elements_cnt) * 1.1
     if send_time < MIN_TIMEOUT_S:
         send_time = MIN_TIMEOUT_S
     return send_time
@@ -105,7 +105,18 @@ def dev_send_receive(test_text, dev_tx, dev_rx, elements_cnt, no_check):
 
     if no_check == 0:
 
+        # Less bytes received? Sleep more and try to receive again
+        if len(rx_bytes) < rx_bytes_expect:
+            time.sleep(calculate_send_time(BIT_CNT, elements_cnt))
+            rx_bytes2 = dev_rx.read(max_rx_bytes)
+            if len(rx_bytes2) > 0:
+                #print('More bytes received: {:d} + {:d}'.format(len(rx_bytes), len(rx_bytes2)))
+                rx_bytearray = bytearray(rx_bytes)
+                rx_bytearray.extend(rx_bytes2)
+                rx_bytes = bytes(rx_bytearray)
+
         if (len(rx_bytes) != rx_bytes_expect) or (rx_bytes != test_data):
+
             print(test_text, '<-- Failed')
             print('Sent {:d} bytes:'.format(len(test_data)))
             hex_dump(test_data)
@@ -130,9 +141,9 @@ parser = argparse.ArgumentParser(prog='test.py',
             description='Test RPico_CDC_UART firmware.')
 
 parser.add_argument('dev1',
-            help='Serial Device 1 (Ex: /dev/ttyUSB0 for USB-UART converter, /dev/ttyACM0 for TinyUSB')
+            help='Serial Device 1 (Ex: /dev/ttyUSB0 for USB-UART converter, /dev/ttyACM0 for TinyUSB)')
 parser.add_argument('dev2',
-            help='Serial Device 2 (Ex: /dev/ttyUSB0 for USB-UART converter, /dev/ttyACM0 for TinyUSB')
+            help='Serial Device 2 (Ex: /dev/ttyUSB0 for USB-UART converter, /dev/ttyACM0 for TinyUSB)')
 parser.add_argument('-b', '--baudrate', default=BAUDRATE, type=int, dest='baudrate',
             help='Baudrate (default: %(default)s)')
 parser.add_argument('-f', '--from', default=TEST_RANGE_FROM, type=int, dest='from_value',

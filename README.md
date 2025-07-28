@@ -144,43 +144,74 @@ The device was rebooted into application mode.
 
 ## Test
 
-Use python script `test/test.py` to test the data transfer in both directions (USB <-> UART):
+### Prerequisites 
 
+Python `pyserial` library is required to run the tests:
 
 ```bash
-python3 test.py -h
-usage: test.py [-h] [-a UART_DEVICE] [-u USB_DEVICE] [-b BAUDRATE] [-f FROM_VALUE] [-t TO_VALUE] send_device
+sudo apt-get install python3-serial
+```
+
+### How to test
+
+Use the python script `test/test.py` to test the data transfer:
+
+```bash
+python3 test/test.py --help
+usage: test.py [-h] [-b BAUDRATE] [-f FROM_VALUE] [-t TO_VALUE] [-n NO_CHECK] [-m TEST_MODE] dev1 dev2
 
 Test RPico_CDC_UART firmware.
 
 positional arguments:
-  send_device           Device that sends data (UART or USB
+  dev1                  Serial Device 1 (Ex: /dev/ttyUSB0 for USB-UART converter, /dev/ttyACM0 for TinyUSB)
+  dev2                  Serial Device 2 (Ex: /dev/ttyUSB0 for USB-UART converter, /dev/ttyACM0 for TinyUSB)
 
 options:
   -h, --help            show this help message and exit
-  -a UART_DEVICE, --uart UART_DEVICE
-                        UART device (default: /dev/ttyUSB0)
-  -u USB_DEVICE, --usb USB_DEVICE
-                        USB device (default: /dev/ttyACM0)
   -b BAUDRATE, --baudrate BAUDRATE
                         Baudrate (default: 115200)
   -f FROM_VALUE, --from FROM_VALUE
                         Test range from (default: 1)
   -t TO_VALUE, --to TO_VALUE
                         Test range to (default: 2050)
-
+  -n NO_CHECK, --no-check NO_CHECK
+                        Do not check the result (default: 0)
+  -m TEST_MODE, --test-mode TEST_MODE
+                        Test mode: 0=D1->D2, 1=D1/D2, 2=rand(D1/D2), 3=rand(pack_len), 4=rand(D1/D2,pack_len) (default: 0)
 ```
 
-Example test: USB->UART, 1000 bytes (from 1 to 1000), baudrate 115200 bps:
+### Test Setup: Raspberry Pi Pico + USB Serial Adapter
 
-```
-python3 test.py --to 1000 -b 115200 USB
+!["Pico-to-USB"](docs/test_setup_pico_usb_serial.png "Raspberry Pi Pico + USB Serial Adapter")
+
+### Test Setup: 2 x Raspberry Pi Pico
+
+!["Pico-to-Pico"](docs/test_setup_pico_pico.png "2 x Raspberry Pi Pico")
+
+### Test Examples
+
+Example USB->Pico, 1000 bytes (from 1 to 1000), baudrate 115200 bps:
+
+```bash
+python3 test/test.py --to 1000 -b 115200 /dev/ttyUSB0 /dev/ttyACM0
 ```
 
-Example test: UART->USB, 200 bytes (from 100 to 300), baudrate 9600 bps:
+Example Pico->USB, 200 bytes (from 100 to 300), baudrate 9600 bps:
 
+```bash
+python3 test/test.py --from 100 --to 300 -b 9600 /dev/ttyACM0 /dev/ttyUSB0
 ```
-python3 test.py --from 100 --to 300 -b 9600 UART
+
+Example Pico1<->Pico2, random directions (Pico1->Pico2, Pico2->Pico1) for every packet:
+
+```bash
+python3 test/test.py --to 1000 -m 2 /dev/ttyACM0 /dev/ttyACM1
+```
+
+Example Pico1->Pico2, random packet length:
+
+```bash
+python3 test/test.py --to 1000 -m 3 /dev/ttyACM0 /dev/ttyACM1
 ```
 
 Info:
