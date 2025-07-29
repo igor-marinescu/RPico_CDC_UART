@@ -75,12 +75,43 @@ typedef uint32_t ustime_t;
     #define UART_CONTROL_TX_ACT()   uart_drv_control_tx_active()
 #endif
 
+// RX/TX-LED Activity Definitions
+#define UART_XX_ACT_LED_HANDLE(tout, pin) \
+    if((tout) > 0){ \
+        if((tout) > main_cycle_ustime){ \
+            (tout) -= main_cycle_ustime; \
+            gpio_put((pin), sys_ustime & 0x00020000); \
+        }else{ \
+            (tout) = 0; \
+            gpio_put((pin), 0); \
+        } \
+    }
+
+#ifdef UART_RX_ACT_LED
+    #define UART_RX_ACT_LED_SET()       uart_rx_act_us_tout = 500000
+    #define UART_RX_ACT_LED_HANDLE()    UART_XX_ACT_LED_HANDLE(uart_rx_act_us_tout, UART_RX_ACT_LED)
+#else
+    #define UART_RX_ACT_LED_SET()
+    #define UART_RX_ACT_LED_HANDLE()
+#endif
+
+#ifdef UART_TX_ACT_LED
+    #define UART_TX_ACT_LED_SET()       uart_tx_act_us_tout = 500000
+    #define UART_TX_ACT_LED_HANDLE()    UART_XX_ACT_LED_HANDLE(uart_tx_act_us_tout, UART_TX_ACT_LED)
+#else
+    #define UART_TX_ACT_LED_SET()
+    #define UART_TX_ACT_LED_HANDLE()
+#endif
+
 //******************************************************************************
 // Global Variables
 //******************************************************************************
 
 // System time in us (since the board was powered-on)
 ustime_t sys_ustime = 0;
+
+// Time of the last main cycle
+ustime_t main_cycle_ustime = 0;
 
 // Data buffers used for USB-UART bridge functionality
 static uint8_t  usb_tx_data[MAIN_USB_TX_BUFF];
@@ -108,6 +139,14 @@ ustime_t uart_rx_ustime = 0;
 
 #ifdef UART_RX_BYTES_TOUT
 ustime_t uart_rx_tout_ustime;
+#endif
+
+#ifdef UART_RX_ACT_LED
+ustime_t uart_rx_act_us_tout;
+#endif
+
+#ifdef UART_TX_ACT_LED
+ustime_t uart_tx_act_us_tout;
 #endif
 
 /*******************************************************************************
@@ -149,11 +188,11 @@ static bool cli_func_boot(int argc, char ** args)
     return true;
 }
 
-/***************************************************************************//**
-* @brief Display a memdump (in hexadecimal format)
-* @param argc [in] - arguments count
-* @param args [in] - array with pointers to arguments string
-* @return true if function successfully executed, false in case of error
+/*******************************************************************************
+ * @brief Display a memdump (in hexadecimal format)
+ * @param argc [in] - arguments count
+ * @param args [in] - array with pointers to arguments string
+ * @return true if function successfully executed, false in case of error
 *******************************************************************************/
 static bool cli_func_memdump(int argc, char ** args)
 {
@@ -171,6 +210,18 @@ static bool cli_func_memdump(int argc, char ** args)
 
     uart_ascii_printf0("memdump %0X %i:\r\n", addr, len);
     uart_ascii_dump((unsigned char *) addr, len, addr);
+    return true;
+}
+
+/*******************************************************************************
+ * @brief Display info
+ * @param argc [in] - arguments count
+ * @param args [in] - array with pointers to arguments string
+ * @return true if function successfully executed, false in case of error
+*******************************************************************************/
+static bool cli_func_info(int argc, char ** args)
+{
+    uart_ascii_printf0("main_cycle_ustime: %i\r\n", main_cycle_ustime);
     return true;
 }
 
@@ -264,6 +315,7 @@ int main(void)
     cli_add_func("help",    NULL,   cli_func_help,      "help");
     cli_add_func("boot",    NULL,   cli_func_boot,      "boot");
     cli_add_func("memdump", NULL,   cli_func_memdump,   "memdump <addr> <len>");
+    cli_add_func("info",    NULL,   cli_func_info,      "info");
 
     MAIN_LOG(" ****************************************\r\n");
     MAIN_LOG(PROJECT_NAME " built: " __DATE__ " " __TIME__ "\r\n");
@@ -276,16 +328,33 @@ int main(void)
     MAIN_LOG("UART mode: device\r\n");
 #endif
 
+    // Init Rx-Activity LED
+#ifdef UART_RX_ACT_LED
+    gpio_init(UART_RX_ACT_LED);
+    gpio_set_dir(UART_RX_ACT_LED, GPIO_OUT);
+    gpio_put(UART_RX_ACT_LED, 0);
+#endif
+
+    // Init Tx-Activity LED
+#ifdef UART_TX_ACT_LED
+    gpio_init(UART_TX_ACT_LED);
+    gpio_set_dir(UART_TX_ACT_LED, GPIO_OUT);
+    gpio_put(UART_TX_ACT_LED, 0);
+#endif
+
     // Start second core for the USB communication
     multicore_launch_core1(usb_main);
 
-    #ifdef UART_RX_BYTES_TOUT
+#ifdef UART_RX_BYTES_TOUT
     uart_rx_tout_ustime = get_uart_ustime(&uart_line_coding, UART_RX_BYTES_TOUT);
-    #endif
+#endif
 
     while(1)
     {
+        uint32_t old_sys_ustime = sys_ustime;
         sys_ustime = get_sys_ustime();
+        main_cycle_ustime = get_diff_ustime(sys_ustime, old_sys_ustime);
+
         TP_TGL(TP3);
 
         if(uart_tx_cnt > MAIN_UART_TX_BUFF)
@@ -314,9 +383,9 @@ int main(void)
             uart_drv_init(&uart_line_coding);
 #endif
 
-            #ifdef UART_RX_BYTES_TOUT
+#ifdef UART_RX_BYTES_TOUT
             uart_rx_tout_ustime = get_uart_ustime(&uart_line_coding, UART_RX_BYTES_TOUT);
-            #endif
+#endif
         }
 
         //----------------------------------------------------------------------
@@ -389,6 +458,7 @@ int main(void)
             }
 
             uart_rx_ustime = sys_ustime;
+            UART_RX_ACT_LED_SET();
         }
 
         // UART data to send? 
@@ -405,11 +475,17 @@ int main(void)
                 uart_tx_cnt -= sent;
             }
             else uart_tx_cnt = 0UL;
+
+            UART_TX_ACT_LED_SET();
         }
 
 #ifdef TX_ACTIVE_SIGNAL
         UART_CONTROL_TX_ACT();
 #endif
+
+        UART_RX_ACT_LED_HANDLE();
+        UART_TX_ACT_LED_HANDLE();
+
         cli_poll();
     }
 }

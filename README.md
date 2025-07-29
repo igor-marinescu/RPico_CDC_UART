@@ -214,10 +214,6 @@ Example Pico1->Pico2, random packet length:
 python3 test/test.py --to 1000 -m 3 /dev/ttyACM0 /dev/ttyACM1
 ```
 
-Info:
-- PICO an USB attached is in linux as "/dev/ttyACMx" detected.
-- FTDI RS232-USB adapter is in linux as "/dev/ttyUSBx" detected.
-
 ## Known Issues
 
 **1. Time to configure UART**
@@ -264,7 +260,6 @@ How to detect when UART has finished sending the stop-bit of the last data:
 
 - Try to fix Known-Issue #2 without sending the dummy byte at init.
 - When UART settings changed, reinit all intern variables including ring buffers and pointers.
-- Add more tests: random directions (usb/uart), random data length packets.
 - Implement flow control: Continuously monitor the fullness of the receive/send buffer.
 - Check if we can use FIFO or DMA.
 - Get rid of pico UART libraries and implement as much as possible in driver.

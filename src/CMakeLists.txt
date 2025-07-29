@@ -9,7 +9,7 @@ pico_sdk_init()
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 # Project 
-add_definitions(-DPROJECT_NAME="${PROJECT_NAME}")
+add_compile_definitions(PROJECT_NAME="${PROJECT_NAME}")
 
 # Debug/Logging: include and printf/dump functions
 add_compile_definitions(DEBUG_INCLUDE="uart_ascii.h")       # include        
@@ -30,6 +30,10 @@ add_compile_definitions(PIO_DATA_HBLB)
 # TX-ACTIVE Output Signal
 add_compile_definitions(TX_ACTIVE_SIGNAL=28)
 #add_compile_definitions(TX_ACTIVE_SIGNAL_INVERTED)
+
+# RX/TX Activity LED
+add_compile_definitions(UART_RX_ACT_LED=16)
+add_compile_definitions(UART_TX_ACT_LED=17)
 
 # Don't allow USB to send small packets for each received UART byte.
 # Send UART->USB when no further data is received from UART for more than 
