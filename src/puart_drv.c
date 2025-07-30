@@ -104,7 +104,7 @@ static ustime_t element_req_ustime;
 
 // The received data is left-justified, must be shifted to right.
 // Example: for 9-bit, data must be shifted 23 bits to the right (32 - 9 = 23)
-#define PIO_RX_BIT_SHIFT    (32-PIO_DATA_BIT)
+#define PIO_RX_BIT_SHIFT    (32-CONFIG_UART_DATA_BIT)
 
 #ifdef TX_ACTIVE_SIGNAL
     #ifdef TX_ACTIVE_SIGNAL_INVERTED
@@ -126,8 +126,8 @@ void puart_drv_init(void)
 {
     int irq_found_flag;
 
-    // Calculate time necessary to transfer a piodata_t element (1 start + PIO_DATA_BIT + 1 stop + 1 reserve)
-    element_req_ustime = get_baudrate_transfer_ustime(PIO_BAUDRATE, (1 + PIO_DATA_BIT + 1 + 1), 1);
+    // Calculate time necessary to transfer a piodata_t element (1 start + CONFIG_UART_DATA_BIT + 1 stop + 1 reserve)
+    element_req_ustime = get_baudrate_transfer_ustime(CONFIG_UART_BAUDRATE, (1 + CONFIG_UART_DATA_BIT + 1 + 1), 1);
 
     //--------------------------------------------------------------------------
     // Configure Tx-Active Signal
@@ -143,9 +143,9 @@ void puart_drv_init(void)
     sm_tx = 0;
 
     uint offset = pio_add_program(pio_tx, &puart_tx_program);
-    puart_tx_program_init(pio_tx, sm_tx, offset, PUART_TX_PIN, PIO_BAUDRATE);
+    puart_tx_program_init(pio_tx, sm_tx, offset, PUART_TX_PIN, CONFIG_UART_BAUDRATE);
     // Send bits_count as first data to SM
-    pio_tx->txf[sm_tx] = (PIO_DATA_BIT - 1);
+    pio_tx->txf[sm_tx] = (CONFIG_UART_DATA_BIT - 1);
 
     // Find a free irq
     irq_found_flag = 1;
@@ -184,9 +184,9 @@ void puart_drv_init(void)
     sm_rx = 1;
 
     offset = pio_add_program(pio_rx, &puart_rx_program);
-    puart_rx_program_init(pio_rx, sm_rx, offset, PUART_RX_PIN, PIO_BAUDRATE);
+    puart_rx_program_init(pio_rx, sm_rx, offset, PUART_RX_PIN, CONFIG_UART_BAUDRATE);
     // Send bits_count as first data to SM
-    pio_rx->txf[sm_rx] = (PIO_DATA_BIT - 1);
+    pio_rx->txf[sm_rx] = (CONFIG_UART_DATA_BIT - 1);
 
     // Find a free irq
     irq_found_flag = 1;
@@ -303,13 +303,13 @@ static void irq_rx_func(void)
         uint32_t rx_v32 = pio_rx->rxf[sm_rx];
         rx_v32 = rx_v32 >> PIO_RX_BIT_SHIFT;
 
-#ifdef PIO_DATA_HBLB
-        // piodata_t = HB,LB
+#ifdef CONFIG_UART_DATA_HBLB
+        // piodata_t = HB,LB (big-endian)
         uint32_t val_hb_lb = (rx_v32 << 8);
         val_hb_lb |= (rx_v32 >> 8);
         piodata_t rx_ch = (piodata_t) (val_hb_lb);
 #else
-        // piodata_t = LB,HB
+        // piodata_t = LB,HB (little-endian)
         piodata_t rx_ch = (piodata_t) (rx_v32);
 #endif
 
@@ -370,13 +370,13 @@ static void irq_txnfull_func(void)
 
             uint32_t val = (uint32_t) tx_buffer[tx_rd_idx++];
 
-#ifdef PIO_DATA_HBLB
-            // piodata_t = HB,LB
+#ifdef CONFIG_UART_DATA_HBLB
+            // piodata_t = HB,LB (big-endian)
             uint32_t val_hb_lb = (val << 8);
             val_hb_lb |= (val >> 8);
             pio_tx->txf[sm_tx] = val_hb_lb;
 #else
-            // piodata_t = LB,HB
+            // piodata_t = LB,HB (little-endian)
             pio_tx->txf[sm_tx] = val;
 #endif
 

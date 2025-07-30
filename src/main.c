@@ -49,8 +49,14 @@
     #define MAIN_LOG(...)    
 #endif  
 
-// System time in micro-seconds
-typedef uint32_t ustime_t;
+// Use UART or PIO-UART (decide based on data-bits count)
+#if CONFIG_UART_DATA_BIT < 7
+    #error Invalid configuration CONFIG_UART_DATA_BIT >= 7
+#elif CONFIG_UART_DATA_BIT > 16
+    #error Invalid configuration CONFIG_UART_DATA_BIT <= 16
+#elif CONFIG_UART_DATA_BIT > 8
+    #define USE_PIO_UART
+#endif
 
 // Buffers size
 #define MAIN_USB_TX_BUFF    2048
@@ -103,6 +109,9 @@ typedef uint32_t ustime_t;
     #define UART_TX_ACT_LED_HANDLE()
 #endif
 
+// System time in micro-seconds
+typedef uint32_t ustime_t;
+
 //******************************************************************************
 // Global Variables
 //******************************************************************************
@@ -128,8 +137,8 @@ cdc_line_coding_t usb_line_coding;
 
 // UART line codding
 uart_line_coding_t uart_line_coding = {
-    .bit_rate = 115200,
-    .data_bits = 8,
+    .bit_rate = CONFIG_UART_BAUDRATE,
+    .data_bits = CONFIG_UART_DATA_BIT,
     .stop_bits = 1,
     .parity = UART_PARITY_NONE
 };
@@ -322,7 +331,7 @@ int main(void)
 
 #ifdef USE_PIO_UART
     puart_drv_init();
-    MAIN_LOG("UART mode: PIO (%ibps, %iN1)\r\n", PIO_BAUDRATE, PIO_DATA_BIT);
+    MAIN_LOG("UART mode: PIO (%ibps, %iN1)\r\n", CONFIG_UART_BAUDRATE, CONFIG_UART_DATA_BIT);
 #else
     uart_drv_init(&uart_line_coding);
     MAIN_LOG("UART mode: device\r\n");

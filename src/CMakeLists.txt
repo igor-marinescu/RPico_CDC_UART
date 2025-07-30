@@ -21,11 +21,12 @@ add_compile_definitions(MAIN_DEBUG)
 add_compile_definitions(UART_DRV_DEBUG)
 add_compile_definitions(PUART_DRV_DEBUG)
 
-# Use PIO-UART instead of UART
-add_compile_definitions(USE_PIO_UART)
-add_compile_definitions(PIO_BAUDRATE=115200)
-add_compile_definitions(PIO_DATA_BIT=9)
-add_compile_definitions(PIO_DATA_HBLB)
+# Default UART configuration
+# If CONFIG_UART_DATA_BIT > 8 the PIO-UART is used instead of UART
+# If CONFIG_UART_DATA_HBLB defined - data transfer for PIO-UART is big-endian
+add_compile_definitions(CONFIG_UART_BAUDRATE=115200)
+add_compile_definitions(CONFIG_UART_DATA_BIT=9)
+add_compile_definitions(CONFIG_UART_DATA_HBLB)
 
 # TX-ACTIVE Output Signal
 add_compile_definitions(TX_ACTIVE_SIGNAL=28)
