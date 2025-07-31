@@ -17,10 +17,12 @@
 
 import sys
 import sertest
+import os
 
 DEV1 = '/dev/ttyACM0'
 DEV2 = '/dev/ttyACM1'
 
+#-------------------------------------------------------------------------------
 test_case_list = [
     # dev1 dev2  baud  from  to  bit hblb nocheck testmode
     #  0    1      2     3   4    5    6     7    8
@@ -36,6 +38,12 @@ test_case_list = [
     (DEV2, DEV1, 115200, 1, 2050, 9, True, False, 4),
 ]
 
+#-------------------------------------------------------------------------------
+#if change_cmake('../src/CMakeLists.txt'):
+    #os.system("make -C ../build/")
+    #pass
+
+#-------------------------------------------------------------------------------
 result = True
 for idx, test_case in enumerate(test_case_list):
 
