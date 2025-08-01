@@ -26,6 +26,7 @@ import random
 # Default Configuration
 MIN_TIMEOUT_S = 0.01
 DEF_BAUD_RATE = 115200
+DEF_BIT_CNT = 8
 MIN_RANGE_FROM = 1
 MAX_RANGE_TO = 2050
 
@@ -63,7 +64,7 @@ class SerTestConfig:
         self.baud_rate = DEF_BAUD_RATE
         self.range_from = MIN_RANGE_FROM
         self.range_to = MAX_RANGE_TO
-        self.bit_cnt = 9
+        self.bit_cnt = 8
         self.data_hblb = True
         self.no_check = False
         self.test_mode = 0
@@ -90,7 +91,14 @@ class SerTest:
     def create_test_data(self, elements_cnt):
         """ Create a template of test data
         """
-        if self.cfg.bit_cnt > 8:
+        test_data = None
+
+        if self.cfg.bit_cnt <= 8:
+            modulo = 2 ** self.cfg.bit_cnt
+            test_data = bytearray(elements_cnt)
+            for i in range(elements_cnt):
+                test_data[i] = (i + elements_cnt) % modulo
+        else:
             test_data = bytearray(elements_cnt * 2)
             for i in range(elements_cnt):
                 if self.cfg.data_hblb:
@@ -99,11 +107,7 @@ class SerTest:
                 else:
                     test_data[(i * 2) + 0] = (i + elements_cnt) % 256
                     test_data[(i * 2) + 1] = i % 2
-            return test_data
         
-        test_data = bytearray(elements_cnt)
-        for i in range(elements_cnt):
-            test_data[i] = (i + elements_cnt) % 256
         return test_data
 
     def  calculate_send_time(self, elements_cnt):
@@ -172,8 +176,17 @@ class SerTest:
         """
         cfg = self.cfg
 
-        dev1 = serial.Serial(cfg.dev1_name, cfg.baud_rate, timeout=0)
-        dev2 = serial.Serial(cfg.dev2_name, cfg.baud_rate, timeout=0)
+        if cfg.bit_cnt == 5:
+            serial_bytesize = serial.FIVEBITS
+        elif cfg.bit_cnt == 6:
+            serial_bytesize = serial.SIXBITS
+        elif cfg.bit_cnt == 7:
+            serial_bytesize = serial.SEVENBITS
+        else:
+            serial_bytesize = serial.EIGHTBITS
+
+        dev1 = serial.Serial(cfg.dev1_name, cfg.baud_rate, timeout=0, bytesize=serial_bytesize)
+        dev2 = serial.Serial(cfg.dev2_name, cfg.baud_rate, timeout=0, bytesize=serial_bytesize)
 
         # Give time (~10ms) to pico to configure the UART interface
         time.sleep(0.01)
@@ -239,6 +252,8 @@ if __name__ == '__main__':
                 help='Serial Device 2 (Ex: /dev/ttyUSB0 for USB-UART converter, /dev/ttyACM0 for TinyUSB)')
     parser.add_argument('-b', '--baudrate', default=DEF_BAUD_RATE, type=int, dest='baudrate',
                 help='Baud-Rate (default: %(default)s)')
+    parser.add_argument('-c', '--bitcnt', default=DEF_BIT_CNT, type=int, dest='bit_cnt',
+                help='Bit-Count (default: %(default)s)')
     parser.add_argument('-f', '--from', default=MIN_RANGE_FROM, type=int, dest='from_value',
                 help='Test range from (default: %(default)s)')
     parser.add_argument('-t', '--to', default=MAX_RANGE_TO, type=int, dest='to_value',
@@ -256,17 +271,21 @@ if __name__ == '__main__':
     if not os.path.exists(args.dev2):
         parser.error(f"Device 2 (dev2) not found: {args.dev2} ")
 
+    if (args.bit_cnt < 5) or (args.bit_cnt > 16):
+        parser.error(f"BITCNT must be between 5 and 16")
+
     if (args.from_value < 1) or (args.to_value > MAX_RANGE_TO) or (args.to_value < args.from_value):
         parser.error(f"FROM_VALUE and TO_VALUE must be between {MIN_RANGE_FROM} and {MAX_RANGE_TO}")
 
     ser_test_config = SerTestConfig()
-    ser_test_config.baud_rate = args.baudrate
+    ser_test_config.baud_rate  = args.baudrate
+    ser_test_config.bit_cnt    = args.bit_cnt
     ser_test_config.range_from = args.from_value
-    ser_test_config.range_to = args.to_value
-    ser_test_config.dev1_name = args.dev1
-    ser_test_config.dev2_name = args.dev2
-    ser_test_config.no_check = args.no_check
-    ser_test_config.test_mode = args.test_mode
+    ser_test_config.range_to   = args.to_value
+    ser_test_config.dev1_name  = args.dev1
+    ser_test_config.dev2_name  = args.dev2
+    ser_test_config.no_check   = args.no_check
+    ser_test_config.test_mode  = args.test_mode
     ser_test_config.print()
 
     ser_test = SerTest(ser_test_config)

@@ -50,8 +50,8 @@
 #endif  
 
 // Use UART or PIO-UART (decide based on data-bits count)
-#if CONFIG_UART_DATA_BIT < 7
-    #error Invalid configuration CONFIG_UART_DATA_BIT >= 7
+#if CONFIG_UART_DATA_BIT < 5
+    #error Invalid configuration CONFIG_UART_DATA_BIT >= 5
 #elif CONFIG_UART_DATA_BIT > 16
     #error Invalid configuration CONFIG_UART_DATA_BIT <= 16
 #elif CONFIG_UART_DATA_BIT > 8

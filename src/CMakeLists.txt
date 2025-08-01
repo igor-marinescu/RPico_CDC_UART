@@ -105,6 +105,19 @@ add_custom_target(
 )
 
 #-------------------------------------------------------------------------------
+# Deploy all (/dev/ttyACM0 and /dev/ttyACM1)
+#-------------------------------------------------------------------------------
+add_custom_target(
+    deployall
+    COMMAND ${CMAKE_COMMAND} -E echo "Deploying to pico ttyACM0..."
+    COMMAND ../scripts/firmware_update.sh "${PROJECT_NAME}.uf2" "/dev/ttyACM0"
+    COMMAND ${CMAKE_COMMAND} -E echo "Deploying to pico ttyACM1..."
+    COMMAND ../scripts/firmware_update.sh "${PROJECT_NAME}.uf2" "/dev/ttyACM1"
+    DEPENDS rpico_cdc_uart
+    COMMENT "Deploying the firmware to picos (/dev/ttyACM0 and /dev/ttyACM1)"
+)
+
+#-------------------------------------------------------------------------------
 # PC-Lint
 #-------------------------------------------------------------------------------
 set(PCLINT_CONFIG "/home/igor/pclp/config/pclp_config.py")
