@@ -37,6 +37,9 @@
 // Init USB Task
 void usb_main(void);
 
+// Get USB connected status: 1=connected, 0=disconnected/suspended
+bool usb_get_connected_status(void);
+
 // Check if received data available and copy to buffer, return cnt of copied bytes
 uint32_t usb_get_rx(uint8_t * buff, uint32_t buff_len);
 

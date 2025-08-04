@@ -67,5 +67,8 @@ void puart_drv_control_tx_active(void);
 // Check if there are received characters and copy them to buffer
 uint32_t puart_drv_get_rx(piodata_t * buff, uint32_t buff_max_len);
 
+// Clear rx buffer (by setting rx_rd_idx and rx_wr_idx to 0)
+void puart_drv_clear_rx(void);
+
 //******************************************************************************
 #endif /* PUART_DRV_H */

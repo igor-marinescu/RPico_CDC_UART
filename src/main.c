@@ -72,6 +72,7 @@
     #define UART_GET_TX_FREE_CNT()  puart_drv_get_tx_free_cnt()
     #define UART_SEND(buff, len)    puart_drv_send_buff((buff), (len))
     #define UART_CONTROL_TX_ACT()   puart_drv_control_tx_active()
+    #define UART_CLEAR_RX()         puart_drv_clear_rx()
 #else
     // Use UART
     typedef uint8_t uartdata_t;
@@ -79,6 +80,7 @@
     #define UART_GET_TX_FREE_CNT()  uart_drv_get_tx_free_cnt() 
     #define UART_SEND(buff, len)    uart_drv_send_buff((buff), (len))
     #define UART_CONTROL_TX_ACT()   uart_drv_control_tx_active()
+    #define UART_CLEAR_RX()         uart_drv_clear_rx()
 #endif
 
 // RX/TX-LED Activity Definitions
@@ -387,6 +389,10 @@ int main(void)
                     usb_line_coding.stop_bits,
                     usb_line_coding.parity);
 
+            // Clear old rx/tx data
+            UART_CLEAR_RX();
+            usb_tx_cnt = 0;
+
             line_coding_usb_to_uart(&uart_line_coding, &usb_line_coding);
 #ifndef USE_PIO_UART
             uart_drv_init(&uart_line_coding);
@@ -431,7 +437,11 @@ int main(void)
 #endif
             {
                 uint32_t sent = usb_set_tx(usb_tx_data, usb_tx_cnt);
-                if(sent < usb_tx_cnt)
+                if(sent == 0UL)
+                {
+                    // Nothing sent, nothing to do
+                }
+                else if(sent < usb_tx_cnt)
                 {
                     // Could not send all data? Move the remaining USB tx buffer
                     // to left to send it next time
@@ -456,7 +466,8 @@ int main(void)
             {
                 uart_rx_bytes = available;
                 // Data lost, no more place in USB buffer
-                MAIN_LOG("UART rx lost (USB tx full)\r\n");
+                //MAIN_LOG("UART rx lost (USB tx full)\r\n");
+                TP_TGL(TP6);
             }
 
             // Append received UART data to USB tx buffer

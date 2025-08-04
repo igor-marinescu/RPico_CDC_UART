@@ -75,6 +75,12 @@ static cdc_line_coding_t line_coding;
 static uint32_t line_coding_changed = 0;
 static struct mutex lc_mutex;
 
+// Variables used to line status (connected/disconnected)
+static bool connected_status = false;
+static struct mutex st_mutex;
+
+static bool line_state_changed_flag = false;
+
 /*******************************************************************************
  * @brief Echo to either Serial0 or Serial1
  * with Serial0 as all lower case, Serial1 as all upper case
@@ -88,6 +94,30 @@ static void echo_serial_port(uint8_t itf, uint8_t buf[], uint32_t count)
         tud_cdc_n_write_char(itf, buf[i]);
     }
     tud_cdc_n_write_flush(itf);
+}
+
+/*******************************************************************************
+ * @brief Set USB connected status
+ * @param Connected status: 1=connected, 0=disconnected/suspended
+ ******************************************************************************/
+static inline void set_connected_status(bool connected_flag)
+{
+    mutex_enter_blocking(&st_mutex);
+    connected_status = connected_flag;
+    mutex_exit(&st_mutex);
+}
+
+/*******************************************************************************
+ * @brief Get USB connected status
+ * @return USB connected status: 1=connected, 0=disconnected/suspended
+ ******************************************************************************/
+bool usb_get_connected_status(void)
+{
+    bool connected_flag;
+    mutex_enter_blocking(&st_mutex);
+    connected_flag = connected_status;
+    mutex_exit(&st_mutex);
+    return connected_flag;
 }
 
 //******************************************************************************
@@ -171,6 +201,18 @@ void tud_cdc_line_state_cb(uint8_t instance, bool dtr, bool rts)
             }
         }
     }
+
+    // Throw away data still to be sent
+    mutex_enter_blocking(&tx_mutex);
+    tx_cnt = 0;
+    mutex_exit(&tx_mutex);
+
+    // Throw away still available received data
+    mutex_enter_blocking(&rx_mutex);
+    rx_cnt = 0;
+    mutex_exit(&rx_mutex);
+
+    line_state_changed_flag = true;
 }
 
 /*******************************************************************************
@@ -265,8 +307,9 @@ uint32_t usb_set_tx(const uint8_t * buff, uint32_t buff_len)
     if((buff_len == 0) || (buff == NULL))
         return 0UL;
 
-    // Block the code until buffer locked
-    //mutex_enter_blocking (&tx_mutex)
+    // Do not accept data to send if line status has not yet changed
+    if(!line_state_changed_flag)
+        return 0UL;
 
     // Try to lock the buffer
     if(mutex_try_enter(&tx_mutex, NULL))
@@ -401,6 +444,7 @@ void usb_main(void)
     mutex_init(&rx_mutex);
     mutex_init(&tx_mutex);
     mutex_init(&lc_mutex);
+    mutex_init(&st_mutex);
 
     while (1)
     {

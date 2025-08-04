@@ -600,3 +600,20 @@ uint32_t puart_drv_get_rx(piodata_t * buff, uint32_t buff_max_len)
     }
     return buff_idx;
 }
+
+/*******************************************************************************
+ * @brief Clear rx buffer (by setting rx_rd_idx and rx_wr_idx to 0)
+ ******************************************************************************/
+void puart_drv_clear_rx(void)
+{
+    // Start semaphore, protect rx_buff0
+    rx_buff0_semaphore = true;
+    rx_idx0 = 0UL;
+    rx_buff0_semaphore = false;
+
+    // Start semaphore: protect: rx_rd_idx, rx_wr_idx, rx_buffer
+    read_semaphore = true;
+    rx_rd_idx = 0UL;
+    rx_wr_idx = 0UL;
+    read_semaphore = false;
+}

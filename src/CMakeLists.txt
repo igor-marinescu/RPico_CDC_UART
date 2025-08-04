@@ -24,7 +24,7 @@ add_compile_definitions(PUART_DRV_DEBUG)
 # Default UART configuration
 # If CONFIG_UART_DATA_BIT > 8 the PIO-UART is used instead of UART
 # If CONFIG_UART_DATA_HBLB defined - data transfer for PIO-UART is big-endian
-add_compile_definitions(CONFIG_UART_BAUDRATE=115200)
+add_compile_definitions(CONFIG_UART_BAUDRATE=250000)
 add_compile_definitions(CONFIG_UART_DATA_BIT=9)
 add_compile_definitions(CONFIG_UART_DATA_HBLB)
 
