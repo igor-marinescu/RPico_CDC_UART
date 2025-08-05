@@ -35,19 +35,14 @@
 // Defines
 //******************************************************************************
 
-/* Blink pattern
- * - 250 ms  : device not mounted
- * - 1000 ms : device mounted
- * - 2500 ms : device is suspended
- */
-enum
-{
-    BLINK_NOT_MOUNTED = 250,
-    BLINK_MOUNTED = 1000,
-    BLINK_SUSPENDED = 2500,
-};
+typedef enum {
+    usb_status_not_mounted = 0,
+    usb_status_mounted,
+    usb_status_suspended,
+} usb_status_t;
 
 #define USB_MAIN_BUFF_LEN   1024
+#define USB_LED_RXTX_ACTIVITY_TOUT  5
 
 //******************************************************************************
 // Function Prototypes
@@ -58,7 +53,7 @@ static void cdc_task(void);
 //******************************************************************************
 // Global Variables
 //******************************************************************************
-static uint32_t blink_interval_ms = BLINK_NOT_MOUNTED;
+static usb_status_t usb_status = usb_status_not_mounted;
 
 // Variables used for received data
 static uint8_t rx_data[USB_MAIN_BUFF_LEN];
@@ -80,6 +75,7 @@ static bool connected_status = false;
 static struct mutex st_mutex;
 
 static bool line_state_changed_flag = false;
+static uint32_t led_rxtx_activity = 0;
 
 /*******************************************************************************
  * @brief Echo to either Serial0 or Serial1
@@ -130,7 +126,7 @@ bool usb_get_connected_status(void)
  ******************************************************************************/
 void tud_mount_cb(void)
 {
-    blink_interval_ms = BLINK_MOUNTED;
+    usb_status = usb_status_mounted;
 }
 
 /*******************************************************************************
@@ -139,7 +135,7 @@ void tud_mount_cb(void)
  ******************************************************************************/
 void tud_umount_cb(void)
 {
-    blink_interval_ms = BLINK_NOT_MOUNTED;
+    usb_status = usb_status_not_mounted;
 }
 
 /*******************************************************************************
@@ -151,7 +147,7 @@ void tud_umount_cb(void)
 void tud_suspend_cb(bool remote_wakeup_en)
 {
     (void) remote_wakeup_en;
-    blink_interval_ms = BLINK_SUSPENDED;
+    usb_status = usb_status_suspended;
 }
 
 /*******************************************************************************
@@ -160,7 +156,7 @@ void tud_suspend_cb(bool remote_wakeup_en)
  ******************************************************************************/
 void tud_resume_cb(void)
 {
-    blink_interval_ms = tud_mounted() ? BLINK_MOUNTED : BLINK_NOT_MOUNTED;
+    usb_status = tud_mounted() ? usb_status_mounted : usb_status_not_mounted;
 }
 
 /*******************************************************************************
@@ -361,6 +357,7 @@ static void cdc_task(void)
                         rx_cnt += count;
                     else
                         rx_cnt = USB_MAIN_BUFF_LEN;
+                    led_rxtx_activity = USB_LED_RXTX_ACTIVITY_TOUT;
                 }
 
                 // Unlock the buffer
@@ -407,6 +404,7 @@ static void cdc_task(void)
                             else tx_cnt = 0UL;
 
                             tud_cdc_n_write_flush(0);
+                            led_rxtx_activity = USB_LED_RXTX_ACTIVITY_TOUT;
                         }
                     }
                 }
@@ -420,20 +418,56 @@ static void cdc_task(void)
 
 /*******************************************************************************
  * @brief Blink board LED according to USB state
+ * 
+ *  Not mounted or suspended: blink 100ms every 1s
+ *          100ms        100ms        100ms        100ms
+ *           +-+          +-+          +-+          +-+
+ *       ...-+ +----------+ +----------+ +----------+ +---...
+ *                        :<--- 1s --->:
+ * 
+ *  Mounted (no data transfer): blink in 1s cycle
+ *          
+ *       ...---+          +------------+          +----...
+ *             +----------+            +----------+ 
+ *                        :<--- 1s --->:
+ * 
+ *  Mounted (data transfer): blink in 100ms cycle
+ *          
+ *           +-+ +-+ +-+ +-+ +-+ +-+ +-+ +-+ +-+ +-+ +-+  
+ *       ...-+ +-+ +-+ +-+ +-+ +-+ +-+ +-+ +-+ +-+ +-+ +-...
+ *                              -->:-:<-- 100ms
+ * 
  ******************************************************************************/
 void led_blinking_task(void)
 {
-    static uint32_t start_ms = 0;
+    static uint32_t led_task_ms = 0;
+    static uint32_t led_task_cnt = 0;
     static bool led_state = false;
 
-    // Blink every interval ms
-    if(board_millis() - start_ms < blink_interval_ms)
-        return; // not enough time
+    // Every 100ms
+    if((board_millis() - led_task_ms) < 100)
+        return;
 
-    start_ms += blink_interval_ms;
+    led_task_ms += 100;
+
+    led_task_cnt++;
+    if(led_task_cnt >= 10)
+        led_task_cnt = 0;
+        
+    if(usb_status == usb_status_mounted)
+    {
+        // If Rx/Tx activity toggle every 100ms if not toggle every 1s
+        if((led_rxtx_activity != 0) || (led_task_cnt == 0))
+            led_state = 1 - led_state;
+    }
+    else{
+        led_state = (led_task_cnt == 0);
+    }
+
+    if(led_rxtx_activity > 0)
+        led_rxtx_activity--;
 
     board_led_write(led_state);
-    led_state = 1 - led_state; // toggle
 }
 
 /*******************************************************************************
