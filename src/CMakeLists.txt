@@ -118,6 +118,17 @@ add_custom_target(
 )
 
 #-------------------------------------------------------------------------------
+# Deploy using SWD interface
+#-------------------------------------------------------------------------------
+add_custom_target(
+    deployswd
+    COMMAND ${CMAKE_COMMAND} -E echo "Deploying to pico using SWD..."
+    COMMAND openocd -f interface/raspberrypi-swd.cfg -f target/rp2040.cfg -c "program ${PROJECT_NAME}.elf verify reset exit"
+    DEPENDS rpico_cdc_uart
+    COMMENT "Deploying the firmware to pico using SWD interface"
+)
+
+#-------------------------------------------------------------------------------
 # PC-Lint
 #-------------------------------------------------------------------------------
 set(PCLINT_CONFIG "/home/igor/pclp/config/pclp_config.py")

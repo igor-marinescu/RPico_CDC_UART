@@ -172,6 +172,8 @@ void tud_cdc_line_state_cb(uint8_t instance, bool dtr, bool rts)
     // DTR = false is counted as disconnected
     if(!dtr)
     {
+        TP_TGL(TP8);
+
         // touch1200 only with first CDC instance (Serial)
         if(instance == 0)
         {
@@ -196,6 +198,9 @@ void tud_cdc_line_state_cb(uint8_t instance, bool dtr, bool rts)
                 reset_usb_boot(0, 0);
             }
         }
+    }
+    else {
+        TP_TGL(TP9);
     }
 
     // Throw away data still to be sent
@@ -228,6 +233,8 @@ void tud_cdc_line_coding_cb(uint8_t itf, cdc_line_coding_t const* p_line_coding)
 {
     if(itf == 0)
     {
+        TP_TGL(TP7);
+        
         mutex_enter_blocking(&lc_mutex);
 
         memcpy(&line_coding, p_line_coding, sizeof(line_coding));
@@ -304,6 +311,7 @@ uint32_t usb_set_tx(const uint8_t * buff, uint32_t buff_len)
         return 0UL;
 
     // Do not accept data to send if line status has not yet changed
+    //  (port has not been yet opened?)
     if(!line_state_changed_flag)
         return 0UL;
 

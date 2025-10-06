@@ -237,6 +237,18 @@ According to RP2040 Datasheet, 4.2 UART -> 4.2.6 Interrupts -> 4.2.6.3. UARTTXIN
 
 The Tx interrupt is generated after a byte is sent. We can't send the first byte directly from the interrupt—the interrupt isn't called. To work around this, the UART driver sends a dummy byte (0) after initialization to enable the TX interrupt.
 
+**3. Detect when COM-Port opened**
+
+The software has to detect when the COM-Port is opened, and collect UART RX data (to be sent over USB) only when COM-Port is opened. There is no need to collect UART RX data if the COM-Port is closed - it leads to data inconsistency.
+
+__Linux__
+
+On Linux, when COM-Port is opened, for example using `open("/dev/ttyACM0", …)`,  the terminal driver asserts DTR by default. The detection could be done by analyzing `dtr` argument in `tud_cdc_line_state_cb()` callback. When `dtr=true`, Linux opened the COM-Port. When `dtr=false`, Linux closed the COM-Port. 
+
+__Windows__
+
+On Windows, the COM port driver does not automatically assert DTR when COM-Port is opened in applications. The application must explicitly request it (e.g. via SetCommState() or EscapeCommFunction(..., SETDTR)). The solution with DTR does not work.
+
 ## Notes
 
 __UART/USB devices in Linux__
