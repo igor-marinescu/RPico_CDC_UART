@@ -56,10 +56,10 @@ fi
 
 echo "Raspberry Pi RP2 Boot found."
 echo "Update device with firmware: $FIRMWARE_FILE"
-picotool load $FIRMWARE_FILE
+${PICO_TOOL} load $FIRMWARE_FILE
 if [[ $? -eq 0 ]]; then
     echo "Success, reboot device."
-    picotool reboot
+    ${PICO_TOOL} reboot
 else
     echo "[ERROR] Failed to load firmware using picotool."
 fi

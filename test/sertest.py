@@ -72,14 +72,21 @@ class SerTestConfig:
     def print(self):
         """ Print Serial-Test configuration
         """
-        print("Device 1:", self.dev1_name)
-        print("Device 2:", self.dev2_name)
-        print("Baud-Rate:", self.baud_rate)
-        print("DataBitCnt:", self.bit_cnt)
-        print("Big-Endian:", self.data_hblb)
-        print("From:", self.range_from, "To:", self.range_to)
-        print("No check:", self.no_check)
-        print("Test Mode:", self.test_mode)
+        #print("Device 1:", self.dev1_name)
+        #print("Device 2:", self.dev2_name)
+        #print("Baud-Rate:", self.baud_rate)
+        #print("DataBitCnt:", self.bit_cnt)
+        #print("Big-Endian:", self.data_hblb)
+        #print("From:", self.range_from, "To:", self.range_to)
+        #print("No check:", self.no_check)
+        #print("Test Mode:", self.test_mode)
+
+        # Device1       | Device2       | Baud-Rate | Bit-Cnt | Big-Endian | From | To   | No-Check | Test-Mode |
+        # /dev/ttyACM0  | /dev/ttyACM1  | 230400    | 9       | 0          | 1    | 9999 | 0        | 1         |
+        print("+---------------+---------------+-----------+---------+------------+------+------+----------+-----------+")
+        print("| Device1       | Device2       | Baud-Rate | Bit-Cnt | Big-Endian | From | To   | No-Check | Test-Mode |")
+        print(f"| {self.dev1_name:<14}| {self.dev2_name:<14}| {self.baud_rate:<10}| {self.bit_cnt:<8}| {self.data_hblb:<11}| {self.range_from:<5}| {self.range_to:<5}| {self.no_check:<9}| {self.test_mode:<10}|")
+        print("+---------------+---------------+-----------+---------+------------+------+------+----------+-----------+")
 
 #-------------------------------------------------------------------------------
 class SerTest:
@@ -236,7 +243,7 @@ class SerTest:
         dev1.close()
         dev2.close()
 
-        return test_passed
+        return (test_passed, i)
 
 
 #-------------------------------------------------------------------------------
@@ -291,7 +298,7 @@ if __name__ == '__main__':
     ser_test = SerTest(ser_test_config)
     res = ser_test.execute()
 
-    print("End of test, Result:", res)
-    if not res:
+    print("End of test, Result:", res[0], "(", res[1], ")")
+    if not res[0]:
         sys.exit(1)
     sys.exit()

@@ -103,9 +103,26 @@ make
 
 __Install picotool:__
 
+To install `picotool` only for the current user (in `/home/$USER/.local/bin/picotool`):
+
 ```bash
 cmake -DCMAKE_INSTALL_PREFIX=~/.local ..
 make install
+```
+
+To install `picotool` for all users (in `/usr/bin/picotool`):
+
+```bash
+cmake -DCMAKE_INSTALL_PREFIX=/usr ..
+sudo make install
+```
+
+### Prerequisites: usbtool
+
+`firmware_update.sh` script uses the `lsusb` command to identify the Raspberry Pi Pico connected to the USB Port. If `lsusb` is not available, install it using the following command:
+
+```bash
+sudo apt-get install usbutils
 ```
 
 ### Deploy firmware to Raspberry Pi Pico
@@ -213,6 +230,32 @@ Example Pico1->Pico2, random packet length:
 ```bash
 python3 test/test.py --to 1000 -m 3 /dev/ttyACM0 /dev/ttyACM1
 ```
+
+## Supported Baudrates
+
+### UART implemnted as PIO
+
+System Clock Frequency: `clk_sys = 125MHz`
+
+PIO Frequency: `clk_pio = clk_sys / (CLKDIV_INT + CLKDIV_FRAC/256)`
+
+Maximal PIO Frequency: `clk_pio_max = clk_sys / (1 + 0/256) = 125MHz`
+
+Minimal PIO Frequency: `clk_pio_min = clk_sys / (65536 + 0/256) = 1907,349Hz` 
+
+One bit is sent/received in 8 PIO clocks.
+
+Maximal UART-PIO Baudrate: `pio_max_baud = clk_pio_max / 8 = 15,635MHz`
+
+Minimal UART-PIO Baudrate: `pio_min_baud = clk_pio_min / 8 = 238,42Hz` 
+
+__Test standard Baudrates__
+
+| Baudrate | Measured Bit-Length | Actual Baudrate | CLKDIV_INT | CLKDIV_FRAC | PIO Frequency |
+| -------- | ------------------- | --------------- | ---------- | ----------- | ------------- |
+| 9600     | 104us               | 9615            |            |             |               |
+| 14400    | 69,4us              | 14409           |            |             |               |
+| 19200    | 52us                | 19230           |            |             |               |
 
 ## Known Issues
 
