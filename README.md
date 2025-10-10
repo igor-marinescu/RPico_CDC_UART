@@ -251,11 +251,17 @@ Minimal UART-PIO Baudrate: `pio_min_baud = clk_pio_min / 8 = 238,42Hz`
 
 __Test standard Baudrates__
 
-| Baudrate | Measured Bit-Length | Actual Baudrate | CLKDIV_INT | CLKDIV_FRAC | PIO Frequency |
-| -------- | ------------------- | --------------- | ---------- | ----------- | ------------- |
-| 9600     | 104us               | 9615            |            |             |               |
-| 14400    | 69,4us              | 14409           |            |             |               |
-| 19200    | 52us                | 19230           |            |             |               |
+All test made in format: 9N1
+
+| Baudrate | Measured Bit (Baudr) | CLKDIV_INT | CLKDIV_FRAC | PIO Freq. |
+| -------- | -------------------- | ---------- | ----------- | --------- |
+| 9600     | 104us (9615)         |            |             |           |
+| 14400    | 69,4us (14409)       |            |             |           |
+| 19200    | 52us (19230)         |            |             |           |
+| 38400    |                      |            |             |           |
+| 57600    |                      |            |             |           |
+| 115200   |                      |            |             |           |
+| 230400   |                      |            |             |           |
 
 ## Known Issues
 

@@ -333,7 +333,13 @@ int main(void)
 
 #ifdef USE_PIO_UART
     puart_drv_init();
-    MAIN_LOG("UART mode: PIO (%ibps, %iN1)\r\n", CONFIG_UART_BAUDRATE, CONFIG_UART_DATA_BIT);
+    MAIN_LOG("UART mode: PIO (%ibps, %iN1", CONFIG_UART_BAUDRATE, CONFIG_UART_DATA_BIT);
+    #if CONFIG_UART_DATA_HBLB > 0
+        MAIN_LOG(", HBLB");
+    #else
+        MAIN_LOG(", LBHB");
+    #endif
+    MAIN_LOG(")\r\n");
 #else
     uart_drv_init(&uart_line_coding);
     MAIN_LOG("UART mode: device\r\n");

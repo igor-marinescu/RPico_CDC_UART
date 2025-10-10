@@ -218,6 +218,18 @@ void puart_drv_init(void)
         //irq_remove_handler(pio_irq_rx, irq_rx_func);
     }
 
+#ifdef PUART_DRV_DEBUG
+    PUART_DRV_LOG("puart_drv_init():\r\n");
+    PUART_DRV_LOG("  CONFIG_UART_BAUDRATE: %u\r\n", CONFIG_UART_BAUDRATE);
+    PUART_DRV_LOG("  CONFIG_UART_DATA_BIT: %u\r\n", CONFIG_UART_DATA_BIT);
+    PUART_DRV_LOG("  CONFIG_PIO_CLKDIV: %u\r\n", CONFIG_PIO_CLKDIV);
+    PUART_DRV_LOG("  element_req_ustime: %u\r\n", element_req_ustime);
+    uint32_t sm0_clkdiv_reg = (uint32_t) pio0->sm[0].clkdiv;
+    PUART_DRV_LOG("  PIO0.SM0_CLKDIV: 0x%08lx\r\n", sm0_clkdiv_reg);
+    PUART_DRV_LOG("       SM0_CLKDIV.INT: %u\r\n", (sm0_clkdiv_reg>>16));
+    PUART_DRV_LOG("       SM0_CLKDIV.FRAC: %u\r\n", (sm0_clkdiv_reg>>8) & 0xFF);
+#endif
+
     //PUART_DRV_LOG("PUART-RX drv init: @%i, %i, %i\r\n", offset, pio_irq_rx, irq_idx_rx);    
 }
 
@@ -303,7 +315,7 @@ static void irq_rx_func(void)
         uint32_t rx_v32 = pio_rx->rxf[sm_rx];
         rx_v32 = rx_v32 >> PIO_RX_BIT_SHIFT;
 
-#ifdef CONFIG_UART_DATA_HBLB
+#if CONFIG_UART_DATA_HBLB > 0
         // piodata_t = HB,LB (big-endian)
         uint32_t val_hb_lb = (rx_v32 << 8);
         val_hb_lb |= (rx_v32 >> 8);
@@ -370,7 +382,7 @@ static void irq_txnfull_func(void)
 
             uint32_t val = (uint32_t) tx_buffer[tx_rd_idx++];
 
-#ifdef CONFIG_UART_DATA_HBLB
+#if CONFIG_UART_DATA_HBLB > 0
             // piodata_t = HB,LB (big-endian)
             uint32_t val_hb_lb = (val << 8);
             val_hb_lb |= (val >> 8);

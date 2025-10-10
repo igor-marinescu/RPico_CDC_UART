@@ -24,9 +24,24 @@ add_compile_definitions(PUART_DRV_DEBUG)
 # Default UART configuration
 # If CONFIG_UART_DATA_BIT > 8 the PIO-UART is used instead of UART
 # If CONFIG_UART_DATA_HBLB defined - data transfer for PIO-UART is big-endian
-add_compile_definitions(CONFIG_UART_BAUDRATE=250000)
-add_compile_definitions(CONFIG_UART_DATA_BIT=9)
-add_compile_definitions(CONFIG_UART_DATA_HBLB)
+# If CONFIG_PIO_CLKDIV is defined, apply it as CLKDIV_INT for PIO (CLKDIV_FRAC is 0)
+# In this case the Baudrate is calculated based on CLKDIV_INT
+
+set(use_uart_baudrate 115200)
+set(use_uart_data_bit 9)
+set(use_uart_data_hblb 1)
+set(use_pio_clkdiv 0)
+
+add_compile_definitions(CONFIG_UART_DATA_BIT=${use_uart_data_bit})
+add_compile_definitions(CONFIG_UART_DATA_HBLB=${use_uart_data_hblb})
+add_compile_definitions(CONFIG_PIO_CLKDIV=${use_pio_clkdiv})
+
+if(use_pio_clkdiv)
+    math(EXPR calc_baudrate "(125000000 / ${use_pio_clkdiv}) / 8")
+    add_compile_definitions(CONFIG_UART_BAUDRATE=${calc_baudrate})
+else()
+    add_compile_definitions(CONFIG_UART_BAUDRATE=${use_uart_baudrate})
+endif()
 
 # TX-ACTIVE Output Signal
 add_compile_definitions(TX_ACTIVE_SIGNAL=28)
