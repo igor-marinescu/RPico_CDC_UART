@@ -162,31 +162,93 @@ def enable_key(str, op_str, key, enable):
         return None
 
 #-------------------------------------------------------------------------------
-def test_change_cmake(file_name):
+def change_set_var_value(str, var, val):
+    """ Search in string <str> a variable <var> which belongs to a set() operation 
+        and change its value to <val>: 
+
+                set(<var> <val>)
+
+        Returns the corrected string or None in case if the variable <var> is not found.
+    """
+    pos_start = 0
+
+    while True:
+
+        # Search the variable <var>
+        pos_start = str.find(var, pos_start)
+        pos_new = pos_start
+        if pos_new <= 0:
+            # Variable not found
+            return None
+
+        # Look to the left from the <var> for the '(' (also skip spaces)
+        pos_new -= 1
+        while (pos_new >= 0) and (str[pos_new] in string.whitespace):
+            pos_new -= 1
+
+        if pos_new < 0:
+            return None
+
+        # '(' found?
+        if str[pos_new] != '(':
+            # Nope, something else, ignore this <var> occurrence, continue looking
+            pos_start += 1
+            continue
+
+        # Look to the left from '(' for the 'set' (also skip spaces)
+        pos_new2 = pos_new - 1
+        while (pos_new2 >= 0) and (str[pos_new2] in string.whitespace):
+            pos_new2 -= 1
+
+        # 'set' found?
+        pos_new2 += 1
+        if (pos_new2 < len("set")) or not str.startswith("set", pos_new2 - len("set")):
+            # Nope, something else, ignore this occurrence, continue looking
+            pos_start += 1
+            continue
+
+        # Search where the variable ends: position of ')' symbol
+        pos_end = str.find(')', pos_start)
+        if pos_end < 0:
+            return None
+
+        # Replace with new '<var> <val>'
+        return (str[:pos_new + 1] + var + ' ' + val + str[pos_end:])
+
+#-------------------------------------------------------------------------------
+def test_change_cmake(file_name_in, file_name_out):
     """ A test function to test the above functions.
     """
     # Check if file exists
-    if not os.path.isfile(file_name):
+    if not os.path.isfile(file_name_in):
         return False
 
     # Read in the file
-    with open(file_name, 'r') as file:
+    with open(file_name_in, 'r') as file:
         filedata = file.read()
 
-    filedata = change_key_value(filedata, 'add_compile_definitions', 'CONFIG_UART_BAUDRATE', str(215211))
+    #filedata = change_key_value(filedata, 'add_compile_definitions', 'CONFIG_UART_BAUDRATE', str(215211))
+    #if not filedata:
+    #    return False
+
+    #filedata = change_key_value(filedata, 'add_compile_definitions', 'CONFIG_UART_DATA_BIT', str(20))
+    #if not filedata:
+    #    return False
+    
+    #filedata = enable_key(filedata, 'add_compile_definitions', 'CONFIG_UART_DATA_HBLB', False)
+    #if not filedata:
+    #    return False
+
+    filedata = change_set_var_value(filedata, 'use_uart_baudrate', str(215211))
     if not filedata:
         return False
 
-    filedata = change_key_value(filedata, 'add_compile_definitions', 'CONFIG_UART_DATA_BIT', str(20))
-    if not filedata:
-        return False
-    
-    filedata = enable_key(filedata, 'add_compile_definitions', 'CONFIG_UART_DATA_HBLB', False)
+    filedata = change_set_var_value(filedata, 'use_pio_clkdiv', str(234))
     if not filedata:
         return False
 
     # Write the file out again
-    with open(file_name, 'w') as file:
+    with open(file_name_out, 'w') as file:
         file.write(filedata)
 
     return True
@@ -194,11 +256,12 @@ def test_change_cmake(file_name):
 #-------------------------------------------------------------------------------
 if __name__ == '__main__':
 
-    if len(sys.argv) < 2:
-        print("File argument missing")
+    if len(sys.argv) < 3:
+        print("Argument missing:")
+        print("cmake_func.py <filename_in> <filename_out>")
         sys.exit(1)
 
-    if test_change_cmake(sys.argv[1]):
+    if test_change_cmake(sys.argv[1], sys.argv[2]):
         print("File successfully modified")
     else:
         print("Error modifying file")

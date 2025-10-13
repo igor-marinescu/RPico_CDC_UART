@@ -40,37 +40,37 @@ test_case_list_default = [
     #                                       no-  test-  
     # dev1 dev2  baud  from   to  bit hblb  check mode build
     #  0    1      2     3    4    5    6     7    8     9
-    (DEV1, DEV2,   9600, 1, 300,   9, True,   0,   0,  True),   # 0
-    (DEV2, DEV1,   9600, 1, 300,   9, True,   0,   0,  False),  # 1
-    (DEV1, DEV2,   9600, 1, 300,   9, True,   0,   4,  False),  # 2
+    (DEV1, DEV2,   9600, 1, 300,   9,   1,   0,   0,  True),   # 0
+    (DEV2, DEV1,   9600, 1, 300,   9,   1,   0,   0,  False),  # 1
+    (DEV1, DEV2,   9600, 1, 300,   9,   1,   0,   4,  False),  # 2
 
-    (DEV1, DEV2,  14400, 1, 500,   9, True,   0,   1,  True),   # 3
-    (DEV2, DEV1,  14400, 1, 500,   9, True,   0,   2,  False),  # 4
-    (DEV1, DEV2,  14400, 1, 500,   9, True,   0,   3,  False),  # 5
+    (DEV1, DEV2,  14400, 1, 500,   9,   1,   0,   1,  True),   # 3
+    (DEV2, DEV1,  14400, 1, 500,   9,   1,   0,   2,  False),  # 4
+    (DEV1, DEV2,  14400, 1, 500,   9,   1,   0,   3,  False),  # 5
 
-    (DEV1, DEV2,  19200, 1, 500,   9, True,   0,   0,  True),   # 6
-    (DEV2, DEV1,  19200, 1, 500,   9, True,   0,   0,  False),  # 7
-    (DEV1, DEV2,  19200, 1, 500,   9, True,   0,   4,  False),  # 8
+    (DEV1, DEV2,  19200, 1, 500,   9,   1,   0,   0,  True),   # 6
+    (DEV2, DEV1,  19200, 1, 500,   9,   1,   0,   0,  False),  # 7
+    (DEV1, DEV2,  19200, 1, 500,   9,   1,   0,   4,  False),  # 8
 
-    (DEV1, DEV2,  38400, 1, 600,   9, True,   0,   1,  True),   # 9
-    (DEV2, DEV1,  38400, 1, 600,   9, True,   0,   2,  False),  # 10
-    (DEV1, DEV2,  38400, 1, 600,   9, True,   0,   3,  False),  # 11
+    (DEV1, DEV2,  38400, 1, 600,   9,   1,   0,   1,  True),   # 9
+    (DEV2, DEV1,  38400, 1, 600,   9,   1,   0,   2,  False),  # 10
+    (DEV1, DEV2,  38400, 1, 600,   9,   1,   0,   3,  False),  # 11
 
-    (DEV1, DEV2,  57600, 1, 600,   9, True,   0,   1,  True),   # 12
-    (DEV2, DEV1,  57600, 1, 600,   9, True,   0,   2,  False),  # 13
-    (DEV1, DEV2,  57600, 1, 600,   9, True,   0,   3,  False),  # 14
+    (DEV1, DEV2,  57600, 1, 600,   9,   1,   0,   1,  True),   # 12
+    (DEV2, DEV1,  57600, 1, 600,   9,   1,   0,   2,  False),  # 13
+    (DEV1, DEV2,  57600, 1, 600,   9,   1,   0,   3,  False),  # 14
 
-    (DEV1, DEV2, 115200, 1, 1000,  9, True,   0,   0,  True),   # 15
-    (DEV2, DEV1, 115200, 1, 1000,  9, True,   0,   0,  False),  # 16
-    (DEV1, DEV2, 115200, 1, 1000,  9, True,   0,   1,  False),  # 17
-    (DEV1, DEV2, 115200, 1, 1000,  9, True,   0,   2,  False),  # 18
-    (DEV1, DEV2, 115200, 1, 1000,  9, True,   0,   4,  False),  # 19
+    (DEV1, DEV2, 115200, 1, 1000,  9,   1,   0,   0,  True),   # 15
+    (DEV2, DEV1, 115200, 1, 1000,  9,   1,   0,   0,  False),  # 16
+    (DEV1, DEV2, 115200, 1, 1000,  9,   1,   0,   1,  False),  # 17
+    (DEV1, DEV2, 115200, 1, 1000,  9,   1,   0,   2,  False),  # 18
+    (DEV1, DEV2, 115200, 1, 1000,  9,   1,   0,   4,  False),  # 19
 
-    (DEV1, DEV2, 230400, 1, 1000,  9, True,   0,   0,  True),   # 15
-    (DEV2, DEV1, 230400, 1, 1000,  9, True,   0,   0,  False),  # 16
-    (DEV1, DEV2, 230400, 1, 1000,  9, True,   0,   1,  False),  # 17
-    (DEV1, DEV2, 230400, 1, 1000,  9, True,   0,   2,  False),  # 18
-    (DEV1, DEV2, 230400, 1, 1000,  9, True,   0,   4,  False),  # 19
+    (DEV1, DEV2, 230400, 1, 1000,  9,   1,   0,   0,  True),   # 15
+    (DEV2, DEV1, 230400, 1, 1000,  9,   1,   0,   0,  False),  # 16
+    (DEV1, DEV2, 230400, 1, 1000,  9,   1,   0,   1,  False),  # 17
+    (DEV1, DEV2, 230400, 1, 1000,  9,   1,   0,   2,  False),  # 18
+    (DEV1, DEV2, 230400, 1, 1000,  9,   1,   0,   4,  False),  # 19
 ]
 
 #-------------------------------------------------------------------------------
@@ -85,15 +85,15 @@ def change_cmake(file_name, baud_rate, bit_cnt, data_hblb):
     with open(file_name, 'r') as file:
         filedata = file.read()
 
-    filedata = cmake_func.change_key_value(filedata, 'add_compile_definitions', 'CONFIG_UART_BAUDRATE', str(baud_rate))
+    filedata = cmake_func.change_set_var_value(filedata, 'use_uart_baudrate', str(baud_rate))
     if not filedata:
         return False
 
-    filedata = cmake_func.change_key_value(filedata, 'add_compile_definitions', 'CONFIG_UART_DATA_BIT', str(bit_cnt))
+    filedata = cmake_func.change_set_var_value(filedata, 'use_uart_data_bit', str(bit_cnt))
     if not filedata:
         return False
     
-    filedata = cmake_func.enable_key(filedata, 'add_compile_definitions', 'CONFIG_UART_DATA_HBLB', data_hblb)
+    filedata = cmake_func.change_set_var_value(filedata, 'use_uart_data_hblb', str(data_hblb))
     if not filedata:
         return False
 
