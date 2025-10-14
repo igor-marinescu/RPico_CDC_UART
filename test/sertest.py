@@ -62,6 +62,7 @@ class SerTestConfig:
         self.dev1_name = '/dev/ttyACM0'
         self.dev2_name = '/dev/ttyACM1'
         self.baud_rate = DEF_BAUD_RATE
+        self.pio_clkdiv = 0
         self.range_from = MIN_RANGE_FROM
         self.range_to = MAX_RANGE_TO
         self.bit_cnt = 8
@@ -81,12 +82,12 @@ class SerTestConfig:
         #print("No check:", self.no_check)
         #print("Test Mode:", self.test_mode)
 
-        # Device1       | Device2       | Baud-Rate | Bit-Cnt | Big-Endian | From | To   | No-Check | Test-Mode |
-        # /dev/ttyACM0  | /dev/ttyACM1  | 230400    | 9       | 0          | 1    | 9999 | 0        | 1         |
-        print("+---------------+---------------+-----------+---------+------------+------+------+----------+-----------+")
-        print("| Device1       | Device2       | Baud-Rate | Bit-Cnt | Big-Endian | From | To   | No-Check | Test-Mode |")
-        print(f"| {self.dev1_name:<14}| {self.dev2_name:<14}| {self.baud_rate:<10}| {self.bit_cnt:<8}| {self.data_hblb:<11}| {self.range_from:<5}| {self.range_to:<5}| {self.no_check:<9}| {self.test_mode:<10}|")
-        print("+---------------+---------------+-----------+---------+------------+------+------+----------+-----------+")
+        #      | Device1       | Device2       | Baud-Rate | CLKDIV | Bit-Cnt | Big-Endian | From | To   | No-Check | Test-Mode |
+        #      | /dev/ttyACM0  | /dev/ttyACM1  | 230400    |      0 | 9       | 0          | 1    | 9999 | 0        | 1         |
+        print("+---------------+---------------+-----------+--------+---------+------------+------+------+----------+-----------+")
+        print("| Device1       | Device2       | Baud-Rate | CLKDIV | Bit-Cnt | Big-Endian | From | To   | No-Check | Test-Mode |")
+        print(f"| {self.dev1_name:<14}| {self.dev2_name:<14}| {self.baud_rate:<10}| {self.pio_clkdiv:<7}| {self.bit_cnt:<8}| {self.data_hblb:<11}| {self.range_from:<5}| {self.range_to:<5}| {self.no_check:<9}| {self.test_mode:<10}|")
+        print("+---------------+---------------+-----------+--------+---------+------------+------+------+----------+-----------+")
 
 #-------------------------------------------------------------------------------
 class SerTest:
@@ -119,12 +120,13 @@ class SerTest:
 
     def  calculate_send_time(self, elements_cnt):
         """ Calculate time required to send data:
-            1 bit = 1/Baud-Rate
-            1 frame = 1 start + bit_cnt + 1 stop = (2 + bit_cnt)/Baud-Rate
-            elements_cnt frames = ((2 + bit_cnt)/Baud-Rate) * elements_cnt
+                1 bit = 1/Baud-Rate
+                1 frame = 1 start + bit_cnt + 1 stop = (2 + bit_cnt)/Baud-Rate
+                elements_cnt frames = ((2 + bit_cnt)/Baud-Rate) * (elements_cnt + 2)
+            Note: 2 added to elements_cnt (see in CMakeFile definition for UART_RX_BYTES_TOUT)
             Add a 1.1 factor as reserve and limit the minimal time to 50ms
         """
-        send_time = ((2.0 + self.cfg.bit_cnt)/self.cfg.baud_rate) * (elements_cnt) * 1.1
+        send_time = ((2.0 + self.cfg.bit_cnt)/self.cfg.baud_rate) * (elements_cnt + 2) * 1.1
         if send_time < MIN_TIMEOUT_S:
             send_time = MIN_TIMEOUT_S
         return send_time

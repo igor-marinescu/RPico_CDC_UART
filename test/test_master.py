@@ -37,44 +37,48 @@ DEV2 = '/dev/ttyACM1'
 
 #-------------------------------------------------------------------------------
 test_case_list_default = [
-    #                                       no-  test-  
-    # dev1 dev2  baud  from   to  bit hblb  check mode build
-    #  0    1      2     3    4    5    6     7    8     9
-    (DEV1, DEV2,   9600, 1, 300,   9,   1,   0,   0,  True),   # 0
-    (DEV2, DEV1,   9600, 1, 300,   9,   1,   0,   0,  False),  # 1
-    (DEV1, DEV2,   9600, 1, 300,   9,   1,   0,   4,  False),  # 2
+    #                      pio-                        no-    test-  
+    # dev1 dev2    baud   clkdiv  from  to  bit  hblb  check  mode build
+    #   0     1       2      3      4    5    6    7    8     9
+    (DEV1, DEV2,    238, 65535,     1,   50,  9,   1,   0,    0,   True),   # 0
+    (DEV2, DEV1,    238, 65535,     1,   50,  9,   1,   0,    0,   False),  # 1
+    (DEV1, DEV2,    238, 65535,     1,   50,  9,   1,   0,    4,   False),  # 2
 
-    (DEV1, DEV2,  14400, 1, 500,   9,   1,   0,   1,  True),   # 3
-    (DEV2, DEV1,  14400, 1, 500,   9,   1,   0,   2,  False),  # 4
-    (DEV1, DEV2,  14400, 1, 500,   9,   1,   0,   3,  False),  # 5
+    (DEV1, DEV2,   9600,     0,     1,  300,  9,   1,   0,    0,   True),   # 3
+    (DEV2, DEV1,   9600,     0,     1,  300,  9,   1,   0,    0,   False),  # 4
+    (DEV1, DEV2,   9600,     0,     1,  300,  9,   1,   0,    4,   False),  # 5
 
-    (DEV1, DEV2,  19200, 1, 500,   9,   1,   0,   0,  True),   # 6
-    (DEV2, DEV1,  19200, 1, 500,   9,   1,   0,   0,  False),  # 7
-    (DEV1, DEV2,  19200, 1, 500,   9,   1,   0,   4,  False),  # 8
+    (DEV1, DEV2,  14400,     0,     1,  500,  9,   1,   0,    1,   True),   # 6
+    (DEV2, DEV1,  14400,     0,     1,  500,  9,   1,   0,    2,   False),  # 7
+    (DEV1, DEV2,  14400,     0,     1,  500,  9,   1,   0,    3,   False),  # 8
 
-    (DEV1, DEV2,  38400, 1, 600,   9,   1,   0,   1,  True),   # 9
-    (DEV2, DEV1,  38400, 1, 600,   9,   1,   0,   2,  False),  # 10
-    (DEV1, DEV2,  38400, 1, 600,   9,   1,   0,   3,  False),  # 11
+    (DEV1, DEV2,  19200,     0,     1,  500,  9,   1,   0,    0,   True),   # 9
+    (DEV2, DEV1,  19200,     0,     1,  500,  9,   1,   0,    0,   False),  # 10
+    (DEV1, DEV2,  19200,     0,     1,  500,  9,   1,   0,    4,   False),  # 11
 
-    (DEV1, DEV2,  57600, 1, 600,   9,   1,   0,   1,  True),   # 12
-    (DEV2, DEV1,  57600, 1, 600,   9,   1,   0,   2,  False),  # 13
-    (DEV1, DEV2,  57600, 1, 600,   9,   1,   0,   3,  False),  # 14
+    (DEV1, DEV2,  38400,     0,     1,  600,  9,   1,   0,    1,   True),   # 12
+    (DEV2, DEV1,  38400,     0,     1,  600,  9,   1,   0,    2,   False),  # 13
+    (DEV1, DEV2,  38400,     0,     1,  600,  9,   1,   0,    3,   False),  # 14
 
-    (DEV1, DEV2, 115200, 1, 1000,  9,   1,   0,   0,  True),   # 15
-    (DEV2, DEV1, 115200, 1, 1000,  9,   1,   0,   0,  False),  # 16
-    (DEV1, DEV2, 115200, 1, 1000,  9,   1,   0,   1,  False),  # 17
-    (DEV1, DEV2, 115200, 1, 1000,  9,   1,   0,   2,  False),  # 18
-    (DEV1, DEV2, 115200, 1, 1000,  9,   1,   0,   4,  False),  # 19
+    (DEV1, DEV2,  57600,     0,     1,  600,  9,   1,   0,    1,   True),   # 15
+    (DEV2, DEV1,  57600,     0,     1,  600,  9,   1,   0,    2,   False),  # 16
+    (DEV1, DEV2,  57600,     0,     1,  600,  9,   1,   0,    3,   False),  # 17
 
-    (DEV1, DEV2, 230400, 1, 1000,  9,   1,   0,   0,  True),   # 15
-    (DEV2, DEV1, 230400, 1, 1000,  9,   1,   0,   0,  False),  # 16
-    (DEV1, DEV2, 230400, 1, 1000,  9,   1,   0,   1,  False),  # 17
-    (DEV1, DEV2, 230400, 1, 1000,  9,   1,   0,   2,  False),  # 18
-    (DEV1, DEV2, 230400, 1, 1000,  9,   1,   0,   4,  False),  # 19
+    (DEV1, DEV2, 115200,     0,     1, 1000,  9,   1,   0,    0,   True),   # 18
+    (DEV2, DEV1, 115200,     0,     1, 1000,  9,   1,   0,    0,   False),  # 19
+    (DEV1, DEV2, 115200,     0,     1, 1000,  9,   1,   0,    1,   False),  # 20
+    (DEV1, DEV2, 115200,     0,     1, 1000,  9,   1,   0,    2,   False),  # 21
+    (DEV1, DEV2, 115200,     0,     1, 1000,  9,   1,   0,    4,   False),  # 22
+
+    (DEV1, DEV2, 230400,     0,     1, 1000,  9,   1,   0,    0,   True),   # 23
+    (DEV2, DEV1, 230400,     0,     1, 1000,  9,   1,   0,    0,   False),  # 24
+    (DEV1, DEV2, 230400,     0,     1, 1000,  9,   1,   0,    1,   False),  # 25
+    (DEV1, DEV2, 230400,     0,     1, 1000,  9,   1,   0,    2,   False),  # 26
+    (DEV1, DEV2, 230400,     0,     1, 1000,  9,   1,   0,    4,   False),  # 27
 ]
 
 #-------------------------------------------------------------------------------
-def change_cmake(file_name, baud_rate, bit_cnt, data_hblb):
+def change_cmake(file_name, baud_rate, pio_clkdiv, bit_cnt, data_hblb):
     """ Modify the CMake file
     """
     # Check if file exists
@@ -86,6 +90,10 @@ def change_cmake(file_name, baud_rate, bit_cnt, data_hblb):
         filedata = file.read()
 
     filedata = cmake_func.change_set_var_value(filedata, 'use_uart_baudrate', str(baud_rate))
+    if not filedata:
+        return False
+
+    filedata = cmake_func.change_set_var_value(filedata, 'use_pio_clkdiv', str(pio_clkdiv))
     if not filedata:
         return False
 
@@ -159,17 +167,20 @@ for idx, test_case in enumerate(test_case_list):
     ser_test_config.dev1_name =  test_case[0]
     ser_test_config.dev2_name =  test_case[1]
     ser_test_config.baud_rate =  test_case[2]
-    ser_test_config.range_from = test_case[3]
-    ser_test_config.range_to =   test_case[4]
-    ser_test_config.bit_cnt =    test_case[5]
-    ser_test_config.data_hblb =  test_case[6]
-    ser_test_config.no_check =   test_case[7]
-    ser_test_config.test_mode =  test_case[8]
+    ser_test_config.pio_clkdiv = test_case[3]
+    ser_test_config.range_from = test_case[4]
+    ser_test_config.range_to =   test_case[5]
+    ser_test_config.bit_cnt =    test_case[6]
+    ser_test_config.data_hblb =  test_case[7]
+    ser_test_config.no_check =   test_case[8]
+    ser_test_config.test_mode =  test_case[9]
+    build = test_case[10]
 
     # Cmake change and rebuild?
-    if (force_f_build > 0) or ((force_f_build == -1) and test_case[9]):
+    if (force_f_build > 0) or ((force_f_build == -1) and build):
         if not change_cmake('../src/CMakeLists.txt', \
             ser_test_config.baud_rate, \
+            ser_test_config.pio_clkdiv, \
             ser_test_config.bit_cnt, \
             ser_test_config.data_hblb):
             print("Error: Cannot change cmake")
