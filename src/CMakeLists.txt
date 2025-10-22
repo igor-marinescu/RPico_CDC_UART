@@ -28,9 +28,10 @@ add_compile_definitions(PUART_DRV_DEBUG)
 # In this case the Baudrate is calculated based on CLKDIV_INT
 
 set(use_uart_baudrate 115200)
-set(use_uart_data_bit 9)
+set(use_uart_data_bit 3)
 set(use_uart_data_hblb 1)
-set(use_pio_clkdiv 0)
+set(use_pio_clkdiv 20)
+#set(use_pio_clkdiv 0)
 
 add_compile_definitions(CONFIG_UART_DATA_BIT=${use_uart_data_bit})
 add_compile_definitions(CONFIG_UART_DATA_HBLB=${use_uart_data_hblb})
@@ -41,6 +42,13 @@ if(use_pio_clkdiv)
     add_compile_definitions(CONFIG_UART_BAUDRATE=${calc_baudrate})
 else()
     add_compile_definitions(CONFIG_UART_BAUDRATE=${use_uart_baudrate})
+endif()
+
+# Decide if PIO_UART is used or normal UART
+if((use_uart_data_bit LESS 5) 
+OR (use_uart_data_bit GREATER 8) 
+OR (use_pio_clkdiv GREATER 0))
+    add_compile_definitions(USE_PIO_UART)
 endif()
 
 # TX-ACTIVE Output Signal

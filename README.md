@@ -263,8 +263,11 @@ All tests executed in format: 9N1
 | 57600    | 17,36us (57603)      | 271        | 68          |   460802,94 | 208us              |
 | 115200   | 8,68us  (115207)     | 135        | 162         |   921605,89 | 104us              |
 | 230400   | 4.34us  (230302)     | 67         | 209         |  1843211,79 | 52us               |
+| 781250   |                      | 20         | 0           |             |                    |
 | 1562500  | 640ns   (1562500)    | 10         | 0           | 12500000,00 | 7us                |
-| 3125000  | 320ns   (3125000)    | 5          | 0           | 25000000,00 | 3us                |
+| 3125000* | 320ns   (3125000)    | 5          | 0           | 25000000,00 | 3us                |
+
+(*) 3125000 Bits/second is not stable, sometimes the software cannot read on time the received data from PIO and the data is lost. Maybe can be fixed by implementing DMA.
 
 ## Known Issues
 

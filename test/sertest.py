@@ -280,8 +280,8 @@ if __name__ == '__main__':
     if not os.path.exists(args.dev2):
         parser.error(f"Device 2 (dev2) not found: {args.dev2} ")
 
-    if (args.bit_cnt < 5) or (args.bit_cnt > 16):
-        parser.error(f"BITCNT must be between 5 and 16")
+    if (args.bit_cnt < 3) or (args.bit_cnt > 16):
+        parser.error(f"BITCNT must be between 3 and 16")
 
     if (args.from_value < 1) or (args.to_value > MAX_RANGE_TO) or (args.to_value < args.from_value):
         parser.error(f"FROM_VALUE and TO_VALUE must be between {MIN_RANGE_FROM} and {MAX_RANGE_TO}")

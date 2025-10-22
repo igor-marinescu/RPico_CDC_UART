@@ -36,46 +36,104 @@ DEV2 = '/dev/ttyACM1'
 #   | 4         | random                 | random        | 
 
 #-------------------------------------------------------------------------------
-test_case_list_default = [
-    #                      pio-                        no-    test-  
-    # dev1 dev2    baud   clkdiv  from  to  bit  hblb  check  mode build
-    #   0     1       2      3      4    5    6    7    8     9
-    (DEV1, DEV2,    238, 65535,     1,   50,  9,   1,   0,    0,   True),   # 0
-    (DEV2, DEV1,    238, 65535,     1,   50,  9,   1,   0,    0,   False),  # 1
-    (DEV1, DEV2,    238, 65535,     1,   50,  9,   1,   0,    4,   False),  # 2
+test_case_list_1 = [
+    #                       pio-                        no-    test-  
+    # dev1 dev2     baud   clkdiv  from  to  bit  hblb  check  mode build
+    #   0     1        2      3      4    5    6    7    8     9
+    (DEV1, DEV2,     238, 65535,     1,   50,  9,   1,   0,    0,   True),   # 0
+    (DEV2, DEV1,     238, 65535,     1,   50,  9,   1,   0,    0,   False),  # 1
+    (DEV1, DEV2,     238, 65535,     1,   50,  9,   1,   0,    4,   False),  # 2
 
-    (DEV1, DEV2,   9600,     0,     1,  300,  9,   1,   0,    0,   True),   # 3
-    (DEV2, DEV1,   9600,     0,     1,  300,  9,   1,   0,    0,   False),  # 4
-    (DEV1, DEV2,   9600,     0,     1,  300,  9,   1,   0,    4,   False),  # 5
+    (DEV1, DEV2,    9600,     0,     1,  300,  9,   1,   0,    0,   True),   # 3
+    (DEV2, DEV1,    9600,     0,     1,  300,  9,   1,   0,    0,   False),  # 4
+    (DEV1, DEV2,    9600,     0,     1,  300,  9,   1,   0,    4,   False),  # 5
 
-    (DEV1, DEV2,  14400,     0,     1,  500,  9,   1,   0,    1,   True),   # 6
-    (DEV2, DEV1,  14400,     0,     1,  500,  9,   1,   0,    2,   False),  # 7
-    (DEV1, DEV2,  14400,     0,     1,  500,  9,   1,   0,    3,   False),  # 8
+    (DEV1, DEV2,   14400,     0,     1,  500,  9,   1,   0,    1,   True),   # 6
+    (DEV2, DEV1,   14400,     0,     1,  500,  9,   1,   0,    2,   False),  # 7
+    (DEV1, DEV2,   14400,     0,     1,  500,  9,   1,   0,    3,   False),  # 8
 
-    (DEV1, DEV2,  19200,     0,     1,  500,  9,   1,   0,    0,   True),   # 9
-    (DEV2, DEV1,  19200,     0,     1,  500,  9,   1,   0,    0,   False),  # 10
-    (DEV1, DEV2,  19200,     0,     1,  500,  9,   1,   0,    4,   False),  # 11
+    (DEV1, DEV2,   19200,     0,     1,  500,  9,   1,   0,    0,   True),   # 9
+    (DEV2, DEV1,   19200,     0,     1,  500,  9,   1,   0,    0,   False),  # 10
+    (DEV1, DEV2,   19200,     0,     1,  500,  9,   1,   0,    4,   False),  # 11
 
-    (DEV1, DEV2,  38400,     0,     1,  600,  9,   1,   0,    1,   True),   # 12
-    (DEV2, DEV1,  38400,     0,     1,  600,  9,   1,   0,    2,   False),  # 13
-    (DEV1, DEV2,  38400,     0,     1,  600,  9,   1,   0,    3,   False),  # 14
+    (DEV1, DEV2,   38400,     0,     1,  600,  9,   1,   0,    1,   True),   # 12
+    (DEV2, DEV1,   38400,     0,     1,  600,  9,   1,   0,    2,   False),  # 13
+    (DEV1, DEV2,   38400,     0,     1,  600,  9,   1,   0,    3,   False),  # 14
 
-    (DEV1, DEV2,  57600,     0,     1,  600,  9,   1,   0,    1,   True),   # 15
-    (DEV2, DEV1,  57600,     0,     1,  600,  9,   1,   0,    2,   False),  # 16
-    (DEV1, DEV2,  57600,     0,     1,  600,  9,   1,   0,    3,   False),  # 17
+    (DEV1, DEV2,   57600,     0,     1,  600,  9,   1,   0,    1,   True),   # 15
+    (DEV2, DEV1,   57600,     0,     1,  600,  9,   1,   0,    2,   False),  # 16
+    (DEV1, DEV2,   57600,     0,     1,  600,  9,   1,   0,    3,   False),  # 17
 
-    (DEV1, DEV2, 115200,     0,     1, 1000,  9,   1,   0,    0,   True),   # 18
-    (DEV2, DEV1, 115200,     0,     1, 1000,  9,   1,   0,    0,   False),  # 19
-    (DEV1, DEV2, 115200,     0,     1, 1000,  9,   1,   0,    1,   False),  # 20
-    (DEV1, DEV2, 115200,     0,     1, 1000,  9,   1,   0,    2,   False),  # 21
-    (DEV1, DEV2, 115200,     0,     1, 1000,  9,   1,   0,    4,   False),  # 22
+    (DEV1, DEV2,  115200,     0,     1, 1000,  9,   1,   0,    0,   True),   # 18
+    (DEV2, DEV1,  115200,     0,     1, 1000,  9,   1,   0,    0,   False),  # 19
+    (DEV1, DEV2,  115200,     0,     1, 1000,  9,   1,   0,    1,   False),  # 20
+    (DEV1, DEV2,  115200,     0,     1, 1000,  9,   1,   0,    2,   False),  # 21
+    (DEV1, DEV2,  115200,     0,     1, 1000,  9,   1,   0,    4,   False),  # 22
 
-    (DEV1, DEV2, 230400,     0,     1, 1000,  9,   1,   0,    0,   True),   # 23
-    (DEV2, DEV1, 230400,     0,     1, 1000,  9,   1,   0,    0,   False),  # 24
-    (DEV1, DEV2, 230400,     0,     1, 1000,  9,   1,   0,    1,   False),  # 25
-    (DEV1, DEV2, 230400,     0,     1, 1000,  9,   1,   0,    2,   False),  # 26
-    (DEV1, DEV2, 230400,     0,     1, 1000,  9,   1,   0,    4,   False),  # 27
+    (DEV1, DEV2,  230400,     0,     1, 1000,  9,   1,   0,    0,   True),   # 23
+    (DEV2, DEV1,  230400,     0,     1, 1000,  9,   1,   0,    0,   False),  # 24
+    (DEV1, DEV2,  230400,     0,     1, 1000,  9,   1,   0,    1,   False),  # 25
+    (DEV1, DEV2,  230400,     0,     1, 1000,  9,   1,   0,    2,   False),  # 26
+    (DEV1, DEV2,  230400,     0,     1, 1000,  9,   1,   0,    4,   False),  # 27
+
+    (DEV1, DEV2, 1562500,     5,     1, 1000,  9,   1,   0,    0,   True),   # 23
+    (DEV2, DEV1, 1562500,     5,     1, 1000,  9,   1,   0,    0,   False),  # 24
+    (DEV1, DEV2, 1562500,     5,     1, 1000,  9,   1,   0,    1,   False),  # 25
+    (DEV1, DEV2, 1562500,     5,     1, 1000,  9,   1,   0,    2,   False),  # 26
+    (DEV1, DEV2, 1562500,     5,     1, 1000,  9,   1,   0,    4,   False),  # 27
 ]
+
+test_case_list_2 = [
+    #                      pio-                        no-    test-  
+    # dev1 dev2    baud   clkdiv  from  to   bit  hblb  check  mode build
+    #   0     1       2      3      4    5     6    7    8     9
+    (DEV1, DEV2,  781250,    20,     1, 1000,  3,   1,   0,    0,   True),   # 0
+    (DEV2, DEV1,  781250,    20,     1, 1000,  3,   1,   0,    0,   False),  # 1
+    (DEV2, DEV1,  781250,    20,     1, 1000,  3,   1,   0,    4,   False),  # 2
+
+    (DEV1, DEV2,  781250,    20,     1, 1000,  4,   1,   0,    0,   True),   # 3
+    (DEV2, DEV1,  781250,    20,     1, 1000,  4,   1,   0,    0,   False),  # 4
+    (DEV2, DEV1,  781250,    20,     1, 1000,  4,   1,   0,    4,   False),  # 5
+
+    (DEV1, DEV2,  781250,    20,     1, 1000,  5,   1,   0,    0,   True),   # 6
+    (DEV2, DEV1,  781250,    20,     1, 1000,  5,   1,   0,    0,   False),  # 7
+    (DEV2, DEV1,  781250,    20,     1, 1000,  5,   1,   0,    4,   False),  # 8
+
+    (DEV1, DEV2,  781250,    20,     1, 1000,  6,   1,   0,    0,   True),   # 9
+    (DEV2, DEV1,  781250,    20,     1, 1000,  6,   1,   0,    0,   False),  # 10
+    (DEV2, DEV1,  781250,    20,     1, 1000,  6,   1,   0,    4,   False),  # 11
+
+    (DEV1, DEV2,  781250,    20,     1, 1000,  7,   1,   0,    0,   True),   # 12
+    (DEV2, DEV1,  781250,    20,     1, 1000,  7,   1,   0,    0,   False),  # 13
+    (DEV2, DEV1,  781250,    20,     1, 1000,  7,   1,   0,    4,   False),  # 14
+
+    (DEV1, DEV2,  781250,    20,     1, 1000,  8,   1,   0,    0,   True),   # 15
+    (DEV2, DEV1,  781250,    20,     1, 1000,  8,   1,   0,    0,   False),  # 16
+    (DEV2, DEV1,  781250,    20,     1, 1000,  8,   1,   0,    4,   False),  # 17
+
+    (DEV1, DEV2,  781250,    20,     1, 1000,  9,   1,   0,    0,   True),   # 18
+    (DEV2, DEV1,  781250,    20,     1, 1000,  9,   1,   0,    0,   False),  # 19
+    (DEV2, DEV1,  781250,    20,     1, 1000,  9,   1,   0,    4,   False),  # 20
+
+    (DEV1, DEV2,  781250,    20,     1, 1000, 10,   1,   0,    0,   True),   # 21
+    (DEV2, DEV1,  781250,    20,     1, 1000, 10,   1,   0,    0,   False),  # 22
+    (DEV2, DEV1,  781250,    20,     1, 1000, 10,   1,   0,    4,   False),  # 23
+
+    (DEV1, DEV2,  781250,    20,     1, 1000, 11,   1,   0,    0,   True),   # 24
+    (DEV2, DEV1,  781250,    20,     1, 1000, 11,   1,   0,    0,   False),  # 25
+    (DEV2, DEV1,  781250,    20,     1, 1000, 11,   1,   0,    4,   False),  # 26
+
+    (DEV1, DEV2,  781250,    20,     1, 1000, 12,   1,   0,    0,   True),   # 27
+    (DEV2, DEV1,  781250,    20,     1, 1000, 12,   1,   0,    0,   False),  # 28
+    (DEV2, DEV1,  781250,    20,     1, 1000, 12,   1,   0,    4,   False),  # 29
+
+    (DEV1, DEV2,  781250,    20,     1, 1000, 16,   1,   0,    0,   True),   # 30
+    (DEV2, DEV1,  781250,    20,     1, 1000, 16,   1,   0,    0,   False),  # 31
+    (DEV2, DEV1,  781250,    20,     1, 1000, 16,   1,   0,    4,   False),  # 32
+]
+
+# Test case to execute
+test_case_list_exe = test_case_list_2
 
 #-------------------------------------------------------------------------------
 def change_cmake(file_name, baud_rate, pio_clkdiv, bit_cnt, data_hblb):
@@ -142,18 +200,18 @@ test_to_idx = args.test_to_idx
 force_f_build = args.force_f_build
 
 if test_to_idx == -1:
-    test_to_idx = len(test_case_list_default) - 1
+    test_to_idx = len(test_case_list_exe) - 1
 
 if (test_from_idx < 0) or (test_from_idx > test_to_idx):
-    parser.error(f"Test Index range From must be between 0 and {len(test_case_list_default)}")
+    parser.error(f"Test Index range From must be between 0 and {len(test_case_list_exe)}")
 
-if (test_to_idx < 0) or (test_to_idx >= len(test_case_list_default)):
-    parser.error(f"Test Index range To must be between 0 and {len(test_case_list_default)}")
+if (test_to_idx < 0) or (test_to_idx >= len(test_case_list_exe)):
+    parser.error(f"Test Index range To must be between 0 and {len(test_case_list_exe)}")
 
 if test_to_idx < test_from_idx:
     parser.error(f"Test Index range From must be < Test Index range To")
 
-test_case_list = test_case_list_default[test_from_idx:test_to_idx + 1]
+test_case_list = test_case_list_exe[test_from_idx:test_to_idx + 1]
 
 #-------------------------------------------------------------------------------
 result = True

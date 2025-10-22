@@ -50,12 +50,8 @@
 #endif  
 
 // Use UART or PIO-UART (decide based on data-bits count)
-#if CONFIG_UART_DATA_BIT < 5
-    #error Invalid configuration CONFIG_UART_DATA_BIT >= 5
-#elif CONFIG_UART_DATA_BIT > 16
+#if CONFIG_UART_DATA_BIT > 16
     #error Invalid configuration CONFIG_UART_DATA_BIT <= 16
-#elif CONFIG_UART_DATA_BIT > 8
-    #define USE_PIO_UART
 #endif
 
 // Buffers size
@@ -422,6 +418,7 @@ int main(void)
                 usb_rx_cnt = available;
                 // Data lost, no more space in UART tx buffer
                 MAIN_LOG("USB rx lost (UART tx full)\r\n");
+                //TP_TGL(TP6);
             }
 
             // Append received USB data to UART tx buffer
@@ -472,8 +469,8 @@ int main(void)
             {
                 uart_rx_bytes = available;
                 // Data lost, no more place in USB buffer
-                //MAIN_LOG("UART rx lost (USB tx full)\r\n");
-                TP_TGL(TP6);
+                MAIN_LOG("UART rx lost (USB tx full)\r\n");
+                //TP_TGL(TP6);
             }
 
             // Append received UART data to USB tx buffer

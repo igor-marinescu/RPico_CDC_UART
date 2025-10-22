@@ -46,7 +46,11 @@
     #define PUART_DRV_LOG(...)    
 #endif  
 
-typedef uint16_t piodata_t;
+#if CONFIG_UART_DATA_BIT > 8
+    typedef uint16_t piodata_t;
+#else
+    typedef uint8_t piodata_t;
+#endif
 
 //******************************************************************************
 // Exported Functions

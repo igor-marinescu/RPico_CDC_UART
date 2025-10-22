@@ -315,13 +315,17 @@ static void irq_rx_func(void)
         uint32_t rx_v32 = pio_rx->rxf[sm_rx];
         rx_v32 = rx_v32 >> PIO_RX_BIT_SHIFT;
 
-#if CONFIG_UART_DATA_HBLB > 0
+#if CONFIG_UART_DATA_BIT > 8
+    #if CONFIG_UART_DATA_HBLB > 0
         // piodata_t = HB,LB (big-endian)
         uint32_t val_hb_lb = (rx_v32 << 8);
         val_hb_lb |= (rx_v32 >> 8);
         piodata_t rx_ch = (piodata_t) (val_hb_lb);
-#else
+    #else
         // piodata_t = LB,HB (little-endian)
+        piodata_t rx_ch = (piodata_t) (rx_v32);
+    #endif
+#else
         piodata_t rx_ch = (piodata_t) (rx_v32);
 #endif
 
@@ -382,13 +386,17 @@ static void irq_txnfull_func(void)
 
             uint32_t val = (uint32_t) tx_buffer[tx_rd_idx++];
 
-#if CONFIG_UART_DATA_HBLB > 0
+#if CONFIG_UART_DATA_BIT > 8
+    #if CONFIG_UART_DATA_HBLB > 0
             // piodata_t = HB,LB (big-endian)
             uint32_t val_hb_lb = (val << 8);
             val_hb_lb |= (val >> 8);
             pio_tx->txf[sm_tx] = val_hb_lb;
-#else
+    #else
             // piodata_t = LB,HB (little-endian)
+            pio_tx->txf[sm_tx] = val;
+    #endif
+#else
             pio_tx->txf[sm_tx] = val;
 #endif
 
