@@ -73,15 +73,6 @@ class SerTestConfig:
     def print(self):
         """ Print Serial-Test configuration
         """
-        #print("Device 1:", self.dev1_name)
-        #print("Device 2:", self.dev2_name)
-        #print("Baud-Rate:", self.baud_rate)
-        #print("DataBitCnt:", self.bit_cnt)
-        #print("Big-Endian:", self.data_hblb)
-        #print("From:", self.range_from, "To:", self.range_to)
-        #print("No check:", self.no_check)
-        #print("Test Mode:", self.test_mode)
-
         #      | Device1       | Device2       | Baud-Rate | CLKDIV | Bit-Cnt | Big-Endian | From | To   | No-Check | Test-Mode |
         #      | /dev/ttyACM0  | /dev/ttyACM1  | 230400    |      0 | 9       | 0          | 1    | 9999 | 0        | 1         |
         print("+---------------+---------------+-----------+--------+---------+------------+------+------+----------+-----------+")
@@ -105,17 +96,18 @@ class SerTest:
             modulo = 2 ** self.cfg.bit_cnt
             test_data = bytearray(elements_cnt)
             for i in range(elements_cnt):
-                test_data[i] = (i + elements_cnt) % modulo
+                val8 = (elements_cnt + i) % modulo
+                test_data[i] = val8
         else:
             test_data = bytearray(elements_cnt * 2)
             for i in range(elements_cnt):
+                val16 = (elements_cnt + i)
                 if self.cfg.data_hblb:
-                    test_data[(i * 2) + 0] = i % 2
-                    test_data[(i * 2) + 1] = (i + elements_cnt) % 256
+                    test_data[(i * 2) + 0] = (val16 >> 8) % 256
+                    test_data[(i * 2) + 1] = (val16) % 256
                 else:
-                    test_data[(i * 2) + 0] = (i + elements_cnt) % 256
-                    test_data[(i * 2) + 1] = i % 2
-        
+                    test_data[(i * 2) + 0] = (val16) % 256
+                    test_data[(i * 2) + 1] = (val16 >> 8) % 256
         return test_data
 
     def  calculate_send_time(self, elements_cnt):
@@ -124,14 +116,14 @@ class SerTest:
                 1 frame = 1 start + bit_cnt + 1 stop = (2 + bit_cnt)/Baud-Rate
                 elements_cnt frames = ((2 + bit_cnt)/Baud-Rate) * (elements_cnt + 2)
             Note: 2 added to elements_cnt (see in CMakeFile definition for UART_RX_BYTES_TOUT)
-            Add a 1.1 factor as reserve and limit the minimal time to 50ms
         """
-        send_time = ((2.0 + self.cfg.bit_cnt)/self.cfg.baud_rate) * (elements_cnt + 2) * 1.1
+        #send_time = ((2.0 + self.cfg.bit_cnt)/self.cfg.baud_rate) * (elements_cnt + 2) * 1.1
+        send_time = ((2.0 + self.cfg.bit_cnt)/self.cfg.baud_rate) * (elements_cnt + 2)
         if send_time < MIN_TIMEOUT_S:
             send_time = MIN_TIMEOUT_S
         return send_time
 
-    def dev_send_receive(self, test_text, dev_tx, dev_rx, elements_cnt):
+    def dev_send_receive(self, test_text, dev_tx, dev_rx, elements_cnt, time_factor):
         """ Create a buffer of test-data of size bytes_count and send it on dev_tx.
             Receive data using dev_rx, if flag no_check is 0, check if the data
             sent is the same as data received.
@@ -140,12 +132,13 @@ class SerTest:
 
         dev_tx.write(test_data)
         dev_tx.flush()
-        time.sleep(self.calculate_send_time(elements_cnt))
+        time.sleep(self.calculate_send_time(elements_cnt) * time_factor)
 
         # Calculate expected count of data to be received (based on bit count)
         # Add a reserve of 4 bytes for the buffer size
         max_rx_bytes = (elements_cnt + 4)
         rx_bytes_expect = elements_cnt
+        # In case we send > 8 bits: 2 bytes are sent for 1 frame
         if self.cfg.bit_cnt > 8:
             max_rx_bytes = max_rx_bytes * 2
             rx_bytes_expect = rx_bytes_expect * 2
@@ -160,7 +153,7 @@ class SerTest:
 
             # Less bytes received? Sleep more and try to receive again
             if len(rx_bytes) < rx_bytes_expect:
-                time.sleep(self.calculate_send_time(elements_cnt))
+                time.sleep(self.calculate_send_time(elements_cnt) * time_factor)
                 rx_bytes2 = dev_rx.read(max_rx_bytes)
                 if len(rx_bytes2) > 0:
                     #print('More bytes received: {:d} + {:d}'.format(len(rx_bytes), len(rx_bytes2)))
@@ -201,30 +194,38 @@ class SerTest:
         time.sleep(0.01)
 
         test_passed = True
+
+        #   | Test Mode | Send Direction         | Packet Length |
+        #   | --------- | ---------------------- | ------------- |
+        #   | 0         | dev1->dev2             | incremented   |
+        #   | 1         | dev1->dev2, dev2->dev1 | incremented   |
+        #   | 2         | random                 | incremented   |
+        #   | 3         | dev1->dev2             | random        |
+        #   | 4         | random                 | random        | 
         for i in range(cfg.range_from, cfg.range_to + 1):
 
-            # Default dev1->dev2
+            # Test Mode 0 (default) dev1->dev2; packet_len(incremented)
             dev_tx, dev_rx = dev1, dev2
             dev_tx_name, dev_rx_name = cfg.dev1_name, cfg.dev2_name
             elements_count = i
 
-            # Test Mode 1: dev1->dev2, dev2->dev1, dev1->dev2, dev2->dev1, ...
+            # Test Mode 1: dev1->dev2, dev2->dev1; packet_len(incremented)
             if cfg.test_mode == 1:
                 if i % 2:
                     dev_tx, dev_rx = dev2, dev1
                     dev_tx_name, dev_rx_name = cfg.dev2_name, cfg.dev1_name
 
-            # Test Mode 2: random(dev1, dev2)
+            # Test Mode 2: random(dev1, dev2); packet_len(incremented)
             elif cfg.test_mode == 2:
                 if random.randint(1, 10) > 5:
                     dev_tx, dev_rx = dev2, dev1
                     dev_tx_name, dev_rx_name = cfg.dev2_name, cfg.dev1_name
 
-            # Test Mode 3: random(packet_len)
+            # Test Mode 3: dev1->dev2; packet_len(random)
             elif cfg.test_mode == 3:
                 elements_count = random.randrange(1, cfg.range_to)
 
-            # Test Mode 4: random(dev1, dev2) & random(packet_len)
+            # Test Mode 4: random(dev1, dev2); packet_len(random)
             elif cfg.test_mode == 4:
                 elements_count = random.randrange(1, cfg.range_to)
                 if random.randint(1, 10) > 5:
@@ -237,8 +238,16 @@ class SerTest:
                 .format(progress, i, dev_tx_name, dev_rx_name, elements_count)
             print(txt_test, sep=' ', end='\r', flush=True)
 
+            # Calculate multiplication factor of send_time depending on device
+            # factor=1.1 if the dev_rx is /dev/ttyACM*
+            # factor=2.0 if the dev_rx is /dev/ttyUSB* 
+            # (ttyUSB requires more time to receive UART data and send it through USB)
+            wait_time_factor = 1.1
+            if dev_rx_name.startswith("/dev/ttyUSB"):
+                wait_time_factor = 2.0
+
             # Execute test
-            if not self.dev_send_receive(txt_test, dev_tx, dev_rx, elements_count):
+            if not self.dev_send_receive(txt_test, dev_tx, dev_rx, elements_count, wait_time_factor):
                 test_passed = False
                 break
 

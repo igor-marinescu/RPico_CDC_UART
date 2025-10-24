@@ -249,7 +249,31 @@ Maximal UART-PIO Baudrate: `pio_max_baud = clk_pio_max / 8 = 15,635MHz`
 
 Minimal UART-PIO Baudrate: `pio_min_baud = clk_pio_min / 8 = 238,42Hz` 
 
-__Test Baudrates__
+__Tests Standart Baudrates/Frame-Formats PIO-UART<->FTDI232__
+
+Data transfers (both directions, different packet sizes) between /dev/ttyACM (PIO-UART) and /dev/ttyUSB (FTDI232):
+
+| Baudrate | Frame Formats |
+| -------- | ------------- |
+| 9600     | 7N1, 8N1      |
+| 14400    | 7N1, 8N1      |
+| 19200    | 7N1, 8N1      |
+| 38400    | 7N1, 8N1      |
+| 57600    | 7N1, 8N1      |
+| 115200   | 7N1, 8N1      |
+| 230400   | 7N1, 8N1      |
+
+__Test PIO-UART<->FTDI232__
+
+Test #30 Fails:
+```
++---------------+---------------+-----------+--------+---------+------------+------+------+----------+-----------+
+| Device1       | Device2       | Baud-Rate | CLKDIV | Bit-Cnt | Big-Endian | From | To   | No-Check | Test-Mode |
+| /dev/ttyACM0  | /dev/ttyACM1  | 9600      | 0      | 9       | 1          | 1    | 300  | 0        | 0         |
++---------------+---------------+-----------+--------+---------+------------+------+------+----------+-----------+
+  85% [##################################______]   257 /dev/ttyACM0->/dev/ttyACM1 (pack.size: 257) <-- Failed
+
+```
 
 All tests executed in format: 9N1
 

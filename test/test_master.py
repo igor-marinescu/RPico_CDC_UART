@@ -22,118 +22,17 @@ import cmake_func
 import time
 import argparse
 
-DEV1 = '/dev/ttyACM0'
-DEV2 = '/dev/ttyACM1'
+# Test PIO-UART<->PIO-UART
+import test_master_list1
+test_case_list_exe = test_master_list1.test_case_list
+dev1 = test_master_list1.DEV1
+dev2 = test_master_list1.DEV2
 
-# Standard Baud-rates 9600, 14400, 19200, 38400, 57600, 115200, 230400
-# Test Modes:
-#   | Test Mode | Send Direction         | Packet Length |
-#   | --------- | ---------------------- | ------------- |
-#   | 0         | dev1->dev2             | incremented   |
-#   | 1         | dev1->dev2, dev2->dev1 | incremented   |
-#   | 2         | random                 | incremented   |
-#   | 3         | dev1->dev2             | random        |
-#   | 4         | random                 | random        | 
-
-#-------------------------------------------------------------------------------
-test_case_list_1 = [
-    #                       pio-                        no-    test-  
-    # dev1 dev2     baud   clkdiv  from  to  bit  hblb  check  mode build
-    #   0     1        2      3      4    5    6    7    8     9
-    (DEV1, DEV2,     238, 65535,     1,   50,  9,   1,   0,    0,   True),   # 0
-    (DEV2, DEV1,     238, 65535,     1,   50,  9,   1,   0,    0,   False),  # 1
-    (DEV1, DEV2,     238, 65535,     1,   50,  9,   1,   0,    4,   False),  # 2
-
-    (DEV1, DEV2,    9600,     0,     1,  300,  9,   1,   0,    0,   True),   # 3
-    (DEV2, DEV1,    9600,     0,     1,  300,  9,   1,   0,    0,   False),  # 4
-    (DEV1, DEV2,    9600,     0,     1,  300,  9,   1,   0,    4,   False),  # 5
-
-    (DEV1, DEV2,   14400,     0,     1,  500,  9,   1,   0,    1,   True),   # 6
-    (DEV2, DEV1,   14400,     0,     1,  500,  9,   1,   0,    2,   False),  # 7
-    (DEV1, DEV2,   14400,     0,     1,  500,  9,   1,   0,    3,   False),  # 8
-
-    (DEV1, DEV2,   19200,     0,     1,  500,  9,   1,   0,    0,   True),   # 9
-    (DEV2, DEV1,   19200,     0,     1,  500,  9,   1,   0,    0,   False),  # 10
-    (DEV1, DEV2,   19200,     0,     1,  500,  9,   1,   0,    4,   False),  # 11
-
-    (DEV1, DEV2,   38400,     0,     1,  600,  9,   1,   0,    1,   True),   # 12
-    (DEV2, DEV1,   38400,     0,     1,  600,  9,   1,   0,    2,   False),  # 13
-    (DEV1, DEV2,   38400,     0,     1,  600,  9,   1,   0,    3,   False),  # 14
-
-    (DEV1, DEV2,   57600,     0,     1,  600,  9,   1,   0,    1,   True),   # 15
-    (DEV2, DEV1,   57600,     0,     1,  600,  9,   1,   0,    2,   False),  # 16
-    (DEV1, DEV2,   57600,     0,     1,  600,  9,   1,   0,    3,   False),  # 17
-
-    (DEV1, DEV2,  115200,     0,     1, 1000,  9,   1,   0,    0,   True),   # 18
-    (DEV2, DEV1,  115200,     0,     1, 1000,  9,   1,   0,    0,   False),  # 19
-    (DEV1, DEV2,  115200,     0,     1, 1000,  9,   1,   0,    1,   False),  # 20
-    (DEV1, DEV2,  115200,     0,     1, 1000,  9,   1,   0,    2,   False),  # 21
-    (DEV1, DEV2,  115200,     0,     1, 1000,  9,   1,   0,    4,   False),  # 22
-
-    (DEV1, DEV2,  230400,     0,     1, 1000,  9,   1,   0,    0,   True),   # 23
-    (DEV2, DEV1,  230400,     0,     1, 1000,  9,   1,   0,    0,   False),  # 24
-    (DEV1, DEV2,  230400,     0,     1, 1000,  9,   1,   0,    1,   False),  # 25
-    (DEV1, DEV2,  230400,     0,     1, 1000,  9,   1,   0,    2,   False),  # 26
-    (DEV1, DEV2,  230400,     0,     1, 1000,  9,   1,   0,    4,   False),  # 27
-
-    (DEV1, DEV2, 1562500,     5,     1, 1000,  9,   1,   0,    0,   True),   # 23
-    (DEV2, DEV1, 1562500,     5,     1, 1000,  9,   1,   0,    0,   False),  # 24
-    (DEV1, DEV2, 1562500,     5,     1, 1000,  9,   1,   0,    1,   False),  # 25
-    (DEV1, DEV2, 1562500,     5,     1, 1000,  9,   1,   0,    2,   False),  # 26
-    (DEV1, DEV2, 1562500,     5,     1, 1000,  9,   1,   0,    4,   False),  # 27
-]
-
-test_case_list_2 = [
-    #                      pio-                        no-    test-  
-    # dev1 dev2    baud   clkdiv  from  to   bit  hblb  check  mode build
-    #   0     1       2      3      4    5     6    7    8     9
-    (DEV1, DEV2,  781250,    20,     1, 1000,  3,   1,   0,    0,   True),   # 0
-    (DEV2, DEV1,  781250,    20,     1, 1000,  3,   1,   0,    0,   False),  # 1
-    (DEV2, DEV1,  781250,    20,     1, 1000,  3,   1,   0,    4,   False),  # 2
-
-    (DEV1, DEV2,  781250,    20,     1, 1000,  4,   1,   0,    0,   True),   # 3
-    (DEV2, DEV1,  781250,    20,     1, 1000,  4,   1,   0,    0,   False),  # 4
-    (DEV2, DEV1,  781250,    20,     1, 1000,  4,   1,   0,    4,   False),  # 5
-
-    (DEV1, DEV2,  781250,    20,     1, 1000,  5,   1,   0,    0,   True),   # 6
-    (DEV2, DEV1,  781250,    20,     1, 1000,  5,   1,   0,    0,   False),  # 7
-    (DEV2, DEV1,  781250,    20,     1, 1000,  5,   1,   0,    4,   False),  # 8
-
-    (DEV1, DEV2,  781250,    20,     1, 1000,  6,   1,   0,    0,   True),   # 9
-    (DEV2, DEV1,  781250,    20,     1, 1000,  6,   1,   0,    0,   False),  # 10
-    (DEV2, DEV1,  781250,    20,     1, 1000,  6,   1,   0,    4,   False),  # 11
-
-    (DEV1, DEV2,  781250,    20,     1, 1000,  7,   1,   0,    0,   True),   # 12
-    (DEV2, DEV1,  781250,    20,     1, 1000,  7,   1,   0,    0,   False),  # 13
-    (DEV2, DEV1,  781250,    20,     1, 1000,  7,   1,   0,    4,   False),  # 14
-
-    (DEV1, DEV2,  781250,    20,     1, 1000,  8,   1,   0,    0,   True),   # 15
-    (DEV2, DEV1,  781250,    20,     1, 1000,  8,   1,   0,    0,   False),  # 16
-    (DEV2, DEV1,  781250,    20,     1, 1000,  8,   1,   0,    4,   False),  # 17
-
-    (DEV1, DEV2,  781250,    20,     1, 1000,  9,   1,   0,    0,   True),   # 18
-    (DEV2, DEV1,  781250,    20,     1, 1000,  9,   1,   0,    0,   False),  # 19
-    (DEV2, DEV1,  781250,    20,     1, 1000,  9,   1,   0,    4,   False),  # 20
-
-    (DEV1, DEV2,  781250,    20,     1, 1000, 10,   1,   0,    0,   True),   # 21
-    (DEV2, DEV1,  781250,    20,     1, 1000, 10,   1,   0,    0,   False),  # 22
-    (DEV2, DEV1,  781250,    20,     1, 1000, 10,   1,   0,    4,   False),  # 23
-
-    (DEV1, DEV2,  781250,    20,     1, 1000, 11,   1,   0,    0,   True),   # 24
-    (DEV2, DEV1,  781250,    20,     1, 1000, 11,   1,   0,    0,   False),  # 25
-    (DEV2, DEV1,  781250,    20,     1, 1000, 11,   1,   0,    4,   False),  # 26
-
-    (DEV1, DEV2,  781250,    20,     1, 1000, 12,   1,   0,    0,   True),   # 27
-    (DEV2, DEV1,  781250,    20,     1, 1000, 12,   1,   0,    0,   False),  # 28
-    (DEV2, DEV1,  781250,    20,     1, 1000, 12,   1,   0,    4,   False),  # 29
-
-    (DEV1, DEV2,  781250,    20,     1, 1000, 16,   1,   0,    0,   True),   # 30
-    (DEV2, DEV1,  781250,    20,     1, 1000, 16,   1,   0,    0,   False),  # 31
-    (DEV2, DEV1,  781250,    20,     1, 1000, 16,   1,   0,    4,   False),  # 32
-]
-
-# Test case to execute
-test_case_list_exe = test_case_list_2
+# Test PIO-UART<->FTDI232
+#import test_master_list3
+#test_case_list_exe = test_master_list3.test_case_list
+#dev1 = test_master_list3.DEV1
+#dev2 = test_master_list3.DEV2
 
 #-------------------------------------------------------------------------------
 def change_cmake(file_name, baud_rate, pio_clkdiv, bit_cnt, data_hblb):
@@ -171,11 +70,11 @@ def change_cmake(file_name, baud_rate, pio_clkdiv, bit_cnt, data_hblb):
 
 #-------------------------------------------------------------------------------
 # Check if serial devices exist
-if not os.path.exists(DEV1):
-    print("Device 1 (dev1) not found:", DEV1)
+if not os.path.exists(dev1):
+    print("Device 1 (dev1) not found:", dev1)
     sys.exit(1)
-if not os.path.exists(DEV2):
-    print("Device 2 (dev2) not found:", DEV2)
+if not os.path.exists(dev2):
+    print("Device 2 (dev2) not found:", dev2)
     sys.exit(1)
 
 #-------------------------------------------------------------------------------
@@ -247,7 +146,14 @@ for idx, test_case in enumerate(test_case_list):
 
         print("Cmake successfully changed")
 
-        ret = os.system("make -C ../build/ deployall")
+        # In case one of the devices is /dev/ttyUSB*
+        # then we need to deploy just in /dev/ttyACM0
+        deploy_text = "deployall"
+        if ser_test_config.dev1_name.startswith("/dev/ttyUSB") \
+        or ser_test_config.dev2_name.startswith("/dev/ttyUSB"):
+            deploy_text = "deploy"
+
+        ret = os.system("make -C ../build/ " + deploy_text)
         if ret != 0:
             print("Error executing make")
             result = False
