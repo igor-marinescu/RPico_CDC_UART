@@ -92,8 +92,8 @@ class SerTest:
         """
         test_data = None
 
+        modulo = 2 ** self.cfg.bit_cnt
         if self.cfg.bit_cnt <= 8:
-            modulo = 2 ** self.cfg.bit_cnt
             test_data = bytearray(elements_cnt)
             for i in range(elements_cnt):
                 val8 = (elements_cnt + i) % modulo
@@ -101,7 +101,7 @@ class SerTest:
         else:
             test_data = bytearray(elements_cnt * 2)
             for i in range(elements_cnt):
-                val16 = (elements_cnt + i)
+                val16 = (elements_cnt + i) % modulo
                 if self.cfg.data_hblb:
                     test_data[(i * 2) + 0] = (val16 >> 8) % 256
                     test_data[(i * 2) + 1] = (val16) % 256
