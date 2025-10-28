@@ -198,10 +198,12 @@ class SerTest:
         #   | Test Mode | Send Direction         | Packet Length |
         #   | --------- | ---------------------- | ------------- |
         #   | 0         | dev1->dev2             | incremented   |
-        #   | 1         | dev1->dev2, dev2->dev1 | incremented   |
-        #   | 2         | random                 | incremented   |
-        #   | 3         | dev1->dev2             | random        |
-        #   | 4         | random                 | random        | 
+        #   | 1         | dev2->dev1             | incremented   |
+        #   | 2         | dev1->dev2, dev2->dev1 | incremented   |
+        #   | 3         | random                 | incremented   |
+        #   | 4         | dev1->dev2             | random        |
+        #   | 5         | dev2->dev1             | random        |
+        #   | 6         | random                 | random        | 
         for i in range(cfg.range_from, cfg.range_to + 1):
 
             # Test Mode 0 (default) dev1->dev2; packet_len(incremented)
@@ -209,24 +211,35 @@ class SerTest:
             dev_tx_name, dev_rx_name = cfg.dev1_name, cfg.dev2_name
             elements_count = i
 
-            # Test Mode 1: dev1->dev2, dev2->dev1; packet_len(incremented)
+            # Test Mode 1: dev2->dev1, packet_len(incremented)
             if cfg.test_mode == 1:
+                dev_tx, dev_rx = dev2, dev1
+                dev_tx_name, dev_rx_name = cfg.dev2_name, cfg.dev1_name
+
+            # Test Mode 2: dev1->dev2, dev2->dev1; packet_len(incremented)
+            elif cfg.test_mode == 2:
                 if i % 2:
                     dev_tx, dev_rx = dev2, dev1
                     dev_tx_name, dev_rx_name = cfg.dev2_name, cfg.dev1_name
 
-            # Test Mode 2: random(dev1, dev2); packet_len(incremented)
-            elif cfg.test_mode == 2:
+            # Test Mode 3: random(dev1, dev2); packet_len(incremented)
+            elif cfg.test_mode == 3:
                 if random.randint(1, 10) > 5:
                     dev_tx, dev_rx = dev2, dev1
                     dev_tx_name, dev_rx_name = cfg.dev2_name, cfg.dev1_name
 
-            # Test Mode 3: dev1->dev2; packet_len(random)
-            elif cfg.test_mode == 3:
+            # Test Mode 4: dev1->dev2; packet_len(random)
+            elif cfg.test_mode == 4:
                 elements_count = random.randrange(1, cfg.range_to)
 
-            # Test Mode 4: random(dev1, dev2); packet_len(random)
-            elif cfg.test_mode == 4:
+            # Test Mode 5: dev2->dev1; packet_len(random)
+            elif cfg.test_mode == 5:
+                dev_tx, dev_rx = dev2, dev1
+                dev_tx_name, dev_rx_name = cfg.dev2_name, cfg.dev1_name
+                elements_count = random.randrange(1, cfg.range_to)
+
+            # Test Mode 6: random(dev1, dev2); packet_len(random)
+            elif cfg.test_mode == 6:
                 elements_count = random.randrange(1, cfg.range_to)
                 if random.randint(1, 10) > 5:
                     dev_tx, dev_rx = dev2, dev1
@@ -279,7 +292,7 @@ if __name__ == '__main__':
     parser.add_argument('-n', '--no-check', default=0, type=int, dest='no_check',
                 help='Do not check the result (default: %(default)s)')
     parser.add_argument('-m', '--test-mode', default=0, type=int, dest='test_mode',
-                help='Test mode: 0=D1->D2, 1=D1/D2, 2=rand(D1/D2), 3=rand(pack_len), 4=rand(D1/D2,pack_len) (default: %(default)s)')
+                help='Test mode: 0..6 (default: %(default)s)')
 
     args = parser.parse_args()
 

@@ -4,7 +4,7 @@ An implementation of a USB-CDC-UART bridge for Raspberry Pi Pico. The Pico devic
 
 Main features:
 - USB CDC uses the TinyUSB library running on a separate core, leaving the main core for bridge processing.
-- UART is fully configurable and based on interrupts (non-blocking mode), maintaining the responsiveness of the main core.
+- UART is fully configurable (frame format 3..16 bis, a wide range of baud-rates supported) and based on interrupts (non-blocking mode), maintaining the responsiveness of the main core.
 - A separate UART module (also fully configurable and interrupt-based/non-blocking) operating in ASCII mode and used as a logging and/or command line interface (profiling, debugging, etc.)
 - Full Software control over data transfer.
 
@@ -18,30 +18,31 @@ Main features:
 
 USB CDC **ACM** (Abstract Control Model) is a vendor-independent publicly documented protocol that can be used for emulating serial ports over USB.
 
-## Transfer bottleneck
+**PIO** TODO!!!
 
-USB (full speed 12 Mbps) is faster than UART. The bottleneck in USB-UART transmission is always UART. UART cannot send data as fast as USB receives.
+**PIO_UART** TODO!!!
 
-### USB -> UART
+## Configuration
 
-!["USB-to-UART"](docs/USB-to-UART.png "USB to UART datatransfer")
+__UART and PIO-UART modes__
 
-If we continuously send data USB->UART, we will reach a point where the UART transmit buffer is full and there is no more space to store any more data received via USB (to be sent via UART).
 
-Solutions:
-1. Make the UART transmit buffer as big as possible.
-2. Implement flow control: continuously monitor how full the UART transmit buffer is and control corresponding flow control signals on the USB side.
+__Supported Baudrates (in PIO-UART mode only)__
 
-### UART -> USB
+System Clock Frequency: `clk_sys = 125MHz`
 
-!["UART-to-USB"](docs/UART-to-USB.png "UART to USB datatransfer")
+PIO Frequency: `clk_pio = clk_sys / (CLKDIV_INT + CLKDIV_FRAC/256)`
 
-Theoretically, there shouldn't be any problems with UART->USB data transfer. However, if the main program cycle is long (takes a lot of time) and the UART receive buffer is small, the software may not be able to transfer the received UART data to USB in a timely manner. The UART receive buffer becomes full, and the newly received data is lost.
+Maximal PIO Frequency: `clk_pio_max = clk_sys / (1 + 0/256) = 125MHz`
 
-Solution:
-1. Make UART receive buffer bigger.
-2. Monitor program main cycle.
-3. Implement flow control: continuously monitor how full the UART receive buffer is and control the corresponding flow control signals on the UART side.
+Minimal PIO Frequency: `clk_pio_min = clk_sys / (65536 + 0/256) = 1907,349Hz` 
+
+One bit is sent/received in 8 PIO clocks.
+
+Maximal UART-PIO Baudrate: `pio_max_baud = clk_pio_max / 8 = 15,635MHz`
+
+Minimal UART-PIO Baudrate: `pio_min_baud = clk_pio_min / 8 = 238,42Hz` 
+
 
 ## Build
 
@@ -231,51 +232,41 @@ Example Pico1->Pico2, random packet length:
 python3 test/test.py --to 1000 -m 3 /dev/ttyACM0 /dev/ttyACM1
 ```
 
-## Supported Baudrates
-
-### UART implemnted as PIO
-
-System Clock Frequency: `clk_sys = 125MHz`
-
-PIO Frequency: `clk_pio = clk_sys / (CLKDIV_INT + CLKDIV_FRAC/256)`
-
-Maximal PIO Frequency: `clk_pio_max = clk_sys / (1 + 0/256) = 125MHz`
-
-Minimal PIO Frequency: `clk_pio_min = clk_sys / (65536 + 0/256) = 1907,349Hz` 
-
-One bit is sent/received in 8 PIO clocks.
-
-Maximal UART-PIO Baudrate: `pio_max_baud = clk_pio_max / 8 = 15,635MHz`
-
-Minimal UART-PIO Baudrate: `pio_min_baud = clk_pio_min / 8 = 238,42Hz` 
+### Tests Results
 
 __Tests Standart Baudrates/Frame-Formats PIO-UART<->FTDI232__
 
 Data transfers (both directions, different packet sizes) between /dev/ttyACM (PIO-UART) and /dev/ttyUSB (FTDI232):
 
-| Baudrate | Frame Formats |
-| -------- | ------------- |
-| 9600     | 7N1, 8N1      |
-| 14400    | 7N1, 8N1      |
-| 19200    | 7N1, 8N1      |
-| 38400    | 7N1, 8N1      |
-| 57600    | 7N1, 8N1      |
-| 115200   | 7N1, 8N1      |
-| 230400   | 7N1, 8N1      |
-
 __Test PIO-UART<->FTDI232__
 
-Test #30 Fails:
-```
-+---------------+---------------+-----------+--------+---------+------------+------+------+----------+-----------+
-| Device1       | Device2       | Baud-Rate | CLKDIV | Bit-Cnt | Big-Endian | From | To   | No-Check | Test-Mode |
-| /dev/ttyACM0  | /dev/ttyACM1  | 9600      | 0      | 9       | 1          | 1    | 300  | 0        | 0         |
-+---------------+---------------+-----------+--------+---------+------------+------+------+----------+-----------+
-  85% [##################################______]   257 /dev/ttyACM0->/dev/ttyACM1 (pack.size: 257) <-- Failed
+| Baudrate | Bit/Frame |
+| -------- | --------- |
+| 9600     | 7, 8      |
+| 14400    | 7, 8      |
+| 19200    | 7, 8      |
+| 38400    | 7, 8      |
+| 57600    | 7, 8      |
+| 115200   | 7, 8      |
+| 230400   | 7, 8      |
 
-```
+__Test PIO-UART<->PIO-UART__
 
-All tests executed in format: 9N1
+| Baudrate | Bit/Frame [Test Mode, X^ means inverted direction]                             |
+| -------- | ------------------------------------------------------------------------------ |
+| 238      | 3[0,0^,4], 4[0,0^,4], 5[0,0^,4], 8[0,0^,4], 9[0,0^,4], 16[0,0^,4]              |
+| 9600     | 3[0,0^,4], 5[0,0^,4], 7[0,0^,4], 8[0,0^,4], 9[0,0^,4], 10[0,0^,4], 16[0,0^,4]  |
+| 14400    | 3[1,2^,3], 6[0,0^,4], 8[1,2^,3], 9[1,2^,3], 16[0,0^,4]                         |
+| 19200    | 3[0,0^,4], 7[0,0^,4], 9[0,0^,4], 14[0,0^,4]                                    |
+| 38400    | 3[1,2^,3], 5[1,2^,3], 8[0,0^,4], 9[1,2^,3], 16[0,0^,4]                         |
+| 57600    | 3[0,0^,4], 7[1,2^,4], 9[1,2^,3], 13[0,0^,4]                                    |
+| 115200   | 3[0,0^,4], 4[0,0^,4], 8[0,0^,4], 9[0,0^,4], 16[0,0^,4]                         |
+| 230400   | 3[0,0^,4], 5[0,0^,4], 7[0,0^,4], 9[0,0^,4], 16[0,0^,4]                         |
+| 1562500  | 6[0,0^,4], 8[0,0^,4], 9[0,0^,4], 16[0,0^,4]                                    |
+
+__Measure actual Bit-Length for different Baudrates and PIO Frequencies__
+
+All tests executed in 9 bit frame format.
 
 | Baudrate | Measured Bit (Baudr) | CLKDIV_INT | CLKDIV_FRAC |  PIO Freq.  | element_req_ustime |
 | -------- | -------------------- | ---------- | ----------- | ----------- | ------------------ |
@@ -287,7 +278,6 @@ All tests executed in format: 9N1
 | 57600    | 17,36us (57603)      | 271        | 68          |   460802,94 | 208us              |
 | 115200   | 8,68us  (115207)     | 135        | 162         |   921605,89 | 104us              |
 | 230400   | 4.34us  (230302)     | 67         | 209         |  1843211,79 | 52us               |
-| 781250   |                      | 20         | 0           |             |                    |
 | 1562500  | 640ns   (1562500)    | 10         | 0           | 12500000,00 | 7us                |
 | 3125000* | 320ns   (3125000)    | 5          | 0           | 25000000,00 | 3us                |
 
@@ -330,17 +320,42 @@ On Windows, the COM port driver does not automatically assert DTR when COM-Port 
 
 ## Notes
 
-__UART/USB devices in Linux__
+### Transfer bottleneck
+
+USB (full speed 12 Mbps) is faster than UART. The bottleneck in USB-UART transmission is always UART. UART cannot send data as fast as USB receives.
+
+__USB->UART__
+
+!["USB-to-UART"](docs/USB-to-UART.png "USB to UART datatransfer")
+
+If we continuously send data USB->UART, we will reach a point where the UART transmit buffer is full and there is no more space to store any more data received via USB (to be sent via UART).
+
+Solutions:
+1. Make the UART transmit buffer as big as possible.
+2. Implement flow control: continuously monitor how full the UART transmit buffer is and control corresponding flow control signals on the USB side.
+
+__UART->USB__
+
+!["UART-to-USB"](docs/UART-to-USB.png "UART to USB datatransfer")
+
+Theoretically, there shouldn't be any problems with UART->USB data transfer. However, if the main program cycle is long (takes a lot of time) and the UART receive buffer is small, the software may not be able to transfer the received UART data to USB in a timely manner. The UART receive buffer becomes full, and the newly received data is lost.
+
+Solution:
+1. Make UART receive buffer bigger.
+2. Monitor program main cycle.
+3. Implement flow control: continuously monitor how full the UART receive buffer is and control the corresponding flow control signals on the UART side.
+
+### UART/USB devices in Linux
 
 `/dev/ttyUSB0` - USB-UART converter, a separate IC (usually FTDI).
 `/dev/ttyACM0` - Raspberry Pi Pico with TinyUSB library that implements CDC ACM (USB Communications Device Class).
 
-__Implement TX_ACTIVE Signal__
+### Implement TX_ACTIVE Signal
 
 Set a GPIO as Output and set it (to active High or Low) while transmitting data.
 This allows using UART together with RS-485 transceivers (for example with THVD1429).
 
-Set the TX_ACTIVE before writing the first data to the shift register and reset it after UART has finishing sending the last data (together with the stop-bit).
+Set the TX_ACTIVE before writing the first data to the shift register and reset it after UART has finished sending the last data (together with the stop-bit).
 
 How to detect when UART has finished sending the stop-bit of the last data:
 

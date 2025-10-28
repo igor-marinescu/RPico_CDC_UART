@@ -20,19 +20,80 @@ import sertest
 import os
 import cmake_func
 import time
-import argparse
 
 # Test PIO-UART<->PIO-UART
-import test_master_list1
-test_case_list_exe = test_master_list1.test_case_list
-dev1 = test_master_list1.DEV1
-dev2 = test_master_list1.DEV2
+#import test_master_list1
+#test_case_list_exe = test_master_list1.test_case_list
+#dev1 = test_master_list1.DEV1
+#dev2 = test_master_list1.DEV2
 
 # Test PIO-UART<->FTDI232
 #import test_master_list3
 #test_case_list_exe = test_master_list3.test_case_list
 #dev1 = test_master_list3.DEV1
 #dev2 = test_master_list3.DEV2
+
+#   | Test Mode | Send Direction         | Packet Length |
+#   | --------- | ---------------------- | ------------- |
+#   | 0         | dev1->dev2             | incremented   |
+#   | 1         | dev2->dev1             | incremented   |
+#   | 2         | dev1->dev2, dev2->dev1 | incremented   |
+#   | 3         | random                 | incremented   |
+#   | 4         | dev1->dev2             | random        |
+#   | 5         | dev2->dev1             | random        |
+#   | 6         | random                 | random        | 
+
+test_def_list1 = [
+    #     0  |   1  |  2 | 3 |     4     |              5
+    #        | pio- | length |           |
+    #   baud |clkdiv| from-to| test-mode |      data bits count
+    (     238, 65535, 1,   50, [0, 1, 6], [3, 4, 5, 8, 9, 16]),
+    (    1200,     0, 1,   50, [0, 1, 6], [3, 6, 8, 9, 10, 16]),
+    (    2400,     0, 1,   50, [0, 1, 6], [3, 6, 8, 9, 10, 16]),
+    (    4800,     0, 1,   50, [0, 1, 6], [3, 6, 8, 9, 10, 16]),
+    (    9600,     0, 1,  300, [0, 1, 6], [3, 5, 7, 8, 9, 11, 16]),
+    (   19200,     0, 1,  500, [0, 1, 6], [3, 7, 9, 14]),
+    (   38400,     0, 1,  600, [0, 1, 6], [3, 5, 8, 9, 16]),
+    (   57600,     0, 1,  600, [0, 1, 6], [3, 7, 9, 13]),
+    (  115200,     0, 1, 1000, [0, 1, 6], [3, 4, 8, 9, 16]),
+    (  230400,     0, 1, 1000, [0, 1, 6], [3, 5, 7, 9, 16]),
+    (  460800,     0, 1, 1000, [0, 1, 6], [3, 4, 8, 9, 15]),
+    (  921600,     0, 1, 1000, [0, 1, 6], [3, 5, 8, 9, 16]),
+    ( 1562500,     5, 1, 1000, [0, 1, 6], [16, 9, 8, 6]),
+]
+
+dev1 = '/dev/ttyACM0'
+dev2 = '/dev/ttyACM1'
+test_def_list = test_def_list1
+
+#-------------------------------------------------------------------------------
+def generate_test_cases(arg_test_def_list, arg_dev1, arg_dev2):
+    """ From test definition list (test_def_list) generate a test case list 
+        (test_case_list) to be passed to sertest module:
+
+        test_def_list = [
+            |<---0-->|<----1---->|<-2->|<-3->|<-----4----->|<--------5-------->|
+            (baudrate, pio_clkdiv, from,   to, [test_modes], [data_bits_counts])
+        ]
+
+        test_case_list = [
+            |<-0->|<-1->|<---2-->|<----3---->|<-4->|<-5->|<---6-->|<----7--->|<----8--->|
+            (dev1, dev2, baudrate, pio_clkdiv, from,   to, bit_cnt, test_mode, build_req)
+        ]
+        """
+    test_case_list = []
+
+    for rec in arg_test_def_list:
+        for bit_cnt in rec[5]:
+            build_req = True
+            for test_mode in rec[4]:
+                test_case_list.append(
+                    #     0          1       2      3        4       5      6         7         8
+                    #    dev1,     dev2,   baud, pio_clk,  from,     to, bit_cnt, test_mode, build_req)
+                    (arg_dev1, arg_dev2, rec[0], rec[1], rec[2], rec[3], bit_cnt, test_mode, build_req))
+                build_req = False
+
+    return test_case_list
 
 #-------------------------------------------------------------------------------
 def change_cmake(file_name, baud_rate, pio_clkdiv, bit_cnt, data_hblb):
@@ -78,46 +139,14 @@ if not os.path.exists(dev2):
     sys.exit(1)
 
 #-------------------------------------------------------------------------------
+test_case_list = generate_test_cases(test_def_list, dev1, dev2)
 
-# Command line parser
-parser = argparse.ArgumentParser(prog='test_master.py',
-            description='Test-Master RPico_CDC_UART firmware.')
-
-parser.add_argument('-f', '--from-idx', default=0, type=int, dest='test_from_idx',
-            help='Test Index range From (default: %(default)s)')
-
-parser.add_argument('-t', '--to-idx', default=-1, type=int, dest='test_to_idx',
-            help='Test Index range To (default: %(default)s)')
-
-parser.add_argument('-b', '--build', default=-1, type=int, dest='force_f_build',
-            help='Force first build (default: %(default)s)')
-
-args = parser.parse_args()
-
-test_from_idx = args.test_from_idx
-test_to_idx = args.test_to_idx
-force_f_build = args.force_f_build
-
-if test_to_idx == -1:
-    test_to_idx = len(test_case_list_exe) - 1
-
-if (test_from_idx < 0) or (test_from_idx > test_to_idx):
-    parser.error(f"Test Index range From must be between 0 and {len(test_case_list_exe)}")
-
-if (test_to_idx < 0) or (test_to_idx >= len(test_case_list_exe)):
-    parser.error(f"Test Index range To must be between 0 and {len(test_case_list_exe)}")
-
-if test_to_idx < test_from_idx:
-    parser.error(f"Test Index range From must be < Test Index range To")
-
-test_case_list = test_case_list_exe[test_from_idx:test_to_idx + 1]
-
-#-------------------------------------------------------------------------------
+force_f_build = -1
 result = True
 for idx, test_case in enumerate(test_case_list):
 
     print()
-    print("***************** Test {:d} ******************".format(test_from_idx + idx))
+    print("***************** Test {:d} ******************".format(idx))
 
     # Create Serial Test Configuration
     ser_test_config = sertest.SerTestConfig()
@@ -128,10 +157,10 @@ for idx, test_case in enumerate(test_case_list):
     ser_test_config.range_from = test_case[4]
     ser_test_config.range_to =   test_case[5]
     ser_test_config.bit_cnt =    test_case[6]
-    ser_test_config.data_hblb =  test_case[7]
-    ser_test_config.no_check =   test_case[8]
-    ser_test_config.test_mode =  test_case[9]
-    build = test_case[10]
+    ser_test_config.test_mode =  test_case[7]
+    ser_test_config.data_hblb =  1
+    ser_test_config.no_check =   0
+    build = test_case[8]
 
     # Cmake change and rebuild?
     if (force_f_build > 0) or ((force_f_build == -1) and build):
