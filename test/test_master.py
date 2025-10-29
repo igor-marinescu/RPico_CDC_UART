@@ -15,23 +15,12 @@
 # along with this program. If not, see <http://www.gnu.org/licenses/>.
 #******************************************************************************
 
-import sys
-import sertest
 import os
-import cmake_func
+import sys
 import time
-
-# Test PIO-UART<->PIO-UART
-#import test_master_list1
-#test_case_list_exe = test_master_list1.test_case_list
-#dev1 = test_master_list1.DEV1
-#dev2 = test_master_list1.DEV2
-
-# Test PIO-UART<->FTDI232
-#import test_master_list3
-#test_case_list_exe = test_master_list3.test_case_list
-#dev1 = test_master_list3.DEV1
-#dev2 = test_master_list3.DEV2
+import argparse
+import sertest
+import cmake_func
 
 #   | Test Mode | Send Direction         | Packet Length |
 #   | --------- | ---------------------- | ------------- |
@@ -43,12 +32,17 @@ import time
 #   | 5         | dev2->dev1             | random        |
 #   | 6         | random                 | random        | 
 
-test_def_list1 = [
-    #     0  |   1  |  2 | 3 |     4     |              5
+test_def1 = (
+    # Device1:
+    '/dev/ttyACM0',
+    # Device2:
+    '/dev/ttyACM1',
+    # Test Cases List:
+    [
+    #     0  |   1  |  2 | 3 |     4     |       5
     #        | pio- | length |           |
-    #   baud |clkdiv| from-to| test-mode |      data bits count
+    #   baud |clkdiv| from-to| test-mode | data bits count
     (     238, 65535, 1,   50, [0, 1, 6], [3, 4, 5, 8, 9, 16]),
-    (    1200,     0, 1,   50, [0, 1, 6], [3, 6, 8, 9, 10, 16]),
     (    2400,     0, 1,   50, [0, 1, 6], [3, 6, 8, 9, 10, 16]),
     (    4800,     0, 1,   50, [0, 1, 6], [3, 6, 8, 9, 10, 16]),
     (    9600,     0, 1,  300, [0, 1, 6], [3, 5, 7, 8, 9, 11, 16]),
@@ -60,28 +54,59 @@ test_def_list1 = [
     (  460800,     0, 1, 1000, [0, 1, 6], [3, 4, 8, 9, 15]),
     (  921600,     0, 1, 1000, [0, 1, 6], [3, 5, 8, 9, 16]),
     ( 1562500,     5, 1, 1000, [0, 1, 6], [16, 9, 8, 6]),
-]
+    ]
+)
 
-dev1 = '/dev/ttyACM0'
-dev2 = '/dev/ttyACM1'
-test_def_list = test_def_list1
+test_def2 = (
+    # Device1:
+    '/dev/ttyACM0',
+    # Device2:
+    '/dev/ttyUSB0',
+    # Test Cases List:
+    [
+    #     0  |   1  |  2 | 3 |     4     |       5
+    #        | pio- | length |           |
+    #   baud |clkdiv| from-to| test-mode | data bits count
+    (    2400,     0, 1,   50, [0, 1, 6], [7, 8]),
+    (    4800,     0, 1,   50, [0, 1, 6], [7, 8]),
+    (    9600,     0, 1,  300, [0, 1, 6], [7, 8]),
+    (   14400,     0, 1,  500, [0, 1, 6], [7, 8]),
+    (   19200,     0, 1,  500, [0, 1, 6], [7, 8]),
+    (   38400,     0, 1,  600, [0, 1, 6], [7, 8]),
+    (   57600,     0, 1,  600, [0, 1, 6], [7, 8]),
+    (  115200,     0, 1, 1000, [0, 1, 6], [7, 8]),
+    (  230400,     0, 1, 1000, [0, 1, 6], [7, 8]),
+    (  460800,     0, 1, 1000, [0, 1, 6], [7, 8]),
+    (  921600,     0, 1, 1000, [0, 1, 6], [7, 8]),
+    ]
+)
 
 #-------------------------------------------------------------------------------
-def generate_test_cases(arg_test_def_list, arg_dev1, arg_dev2):
-    """ From test definition list (test_def_list) generate a test case list 
+def generate_test_cases(arg_test_def):
+    """ From test definition (test_def) generate a test case list 
         (test_case_list) to be passed to sertest module:
 
-        test_def_list = [
+        test_def = (
+            'dev1',
+            'dev2',
+            [
             |<---0-->|<----1---->|<-2->|<-3->|<-----4----->|<--------5-------->|
             (baudrate, pio_clkdiv, from,   to, [test_modes], [data_bits_counts])
-        ]
+                ...
+            ]
+        )
 
         test_case_list = [
             |<-0->|<-1->|<---2-->|<----3---->|<-4->|<-5->|<---6-->|<----7--->|<----8--->|
             (dev1, dev2, baudrate, pio_clkdiv, from,   to, bit_cnt, test_mode, build_req)
+            ...
         ]
         """
     test_case_list = []
+
+    arg_dev1 = arg_test_def[0]
+    arg_dev2 = arg_test_def[1]
+    arg_test_def_list = arg_test_def[2]
 
     for rec in arg_test_def_list:
         for bit_cnt in rec[5]:
@@ -130,16 +155,32 @@ def change_cmake(file_name, baud_rate, pio_clkdiv, bit_cnt, data_hblb):
     return True
 
 #-------------------------------------------------------------------------------
+# Command line parser
+parser = argparse.ArgumentParser(prog='test_master.py',
+            description='Test-Master RPico_CDC_UART firmware.')
+
+parser.add_argument('-s', '--set', default=0, type=int, dest='test_set',
+            help='Test set to use while generating test cases (default: %(default)s)')
+
+args = parser.parse_args()
+
+test_set = args.test_set
+
+test_def = test_def1
+if test_set == 2:
+    test_def = test_def2
+
+#-------------------------------------------------------------------------------
 # Check if serial devices exist
-if not os.path.exists(dev1):
-    print("Device 1 (dev1) not found:", dev1)
+if not os.path.exists(test_def[0]):
+    print("Device 1 (dev1) not found:", test_def[0])
     sys.exit(1)
-if not os.path.exists(dev2):
-    print("Device 2 (dev2) not found:", dev2)
+if not os.path.exists(test_def[1]):
+    print("Device 2 (dev2) not found:", test_def[1])
     sys.exit(1)
 
 #-------------------------------------------------------------------------------
-test_case_list = generate_test_cases(test_def_list, dev1, dev2)
+test_case_list = generate_test_cases(test_def)
 
 force_f_build = -1
 result = True
