@@ -1,12 +1,15 @@
 # RPico CDC UART
 
-An implementation of a USB-CDC-UART bridge for Raspberry Pi Pico. The Pico device (which is powered by USB and recognized by the operating system as a CDC device) forwards all received USB data to its UART and data received from the UART back to USB, acting as a USB-UART bridge. 
+!["RPico-CDC-UART_Cover"](docs/cover.png "RPico CDC UART Cover")
+
+An implementation of a USB-UART bridge for Raspberry Pi Pico (RP2040). The Pico device (which is powered by USB and recognized by the operating system as a CDC device) forwards all received USB data to its UART and data received from the UART back to USB, acting as a USB-UART bridge. 
 
 Main features:
-- USB CDC uses the TinyUSB library running on a separate core, leaving the main core for bridge processing.
-- UART is fully configurable (frame format 3..16 bis, a wide range of baud-rates supported) and based on interrupts (non-blocking mode), maintaining the responsiveness of the main core.
-- A separate UART module (also fully configurable and interrupt-based/non-blocking) operating in ASCII mode and used as a logging and/or command line interface (profiling, debugging, etc.)
+- Fully configurable UART: 3..16 bits/frame format; a wide range of baud-rates supported (238 bits/sec..1,5Mbits/sec); interrupt-based (non-blocking mode), maintaining the responsiveness of the main core.
+- USB CDC uses the TinyUSB library running on a separate core, leaving the main core for UART-USB bridge processing.
+- A separate UART module (also fully configurable and interrupt-based) operating in ASCII mode and used as a logging and/or command line interface (profiling, debugging, etc.)
 - Full Software control over data transfer.
+- A set of GPIO which can be used for different purposes:  trigger when some conditions are satisfied (ex: a special frame is received) or send some telegrams when an input level is detected.
 
 ## Terms
 
@@ -18,31 +21,75 @@ Main features:
 
 USB CDC **ACM** (Abstract Control Model) is a vendor-independent publicly documented protocol that can be used for emulating serial ports over USB.
 
-**PIO** TODO!!!
+**PIO** (Programmable I/O) is a piece of hardware developed for RP2040. It allows to create new types of (or additional) hardware interfaces on RP2040-based device. The PIO subsystem on RP2040 allows to write small, simple programs for what are called PIO state machines, of which RP2040 has eight split across two PIO instances. A state machine is responsible for setting and reading one or more GPIOs, buffering data to or from the processor (or RP2040’s ultra-fast DMA subsystem), and notifying the processor, via IRQ or polling, when data or attention is needed.
 
-**PIO_UART** TODO!!!
+**PIO-UART** is the UART interface implemented on RP2040 using PIO.
 
 ## Configuration
 
-__UART and PIO-UART modes__
+The USB-UART bridge can be configured by editing the CMakeLists file (`src\CMakeLists.txt`). 
 
+The following options are possible:
 
-__Supported Baudrates (in PIO-UART mode only)__
+__USE_PIO_UART__
 
-System Clock Frequency: `clk_sys = 125MHz`
+The UART interface in the USB-UART bridge can work in one of two modes:
+- PIO-UART - UART is implemented in PIO. A wide range of non-standard baud-rates and frame-formats are supported. The UART settings are hardcoded in Firmware and cannot be changed on run-time.
+- UART - the RP2040 UART peripheral is used. Only the standard baud-rates and frame-formats are supported. The UART settings can be changed on run-time (when connecting to USB).
 
-PIO Frequency: `clk_pio = clk_sys / (CLKDIV_INT + CLKDIV_FRAC/256)`
+When the `USE_PIO_UART` is defined, the UART works in PIO-UART mode:
 
-Maximal PIO Frequency: `clk_pio_max = clk_sys / (1 + 0/256) = 125MHz`
+```
+add_compile_definitions(USE_PIO_UART)
+```
 
-Minimal PIO Frequency: `clk_pio_min = clk_sys / (65536 + 0/256) = 1907,349Hz` 
+__PIO-UART Settings__
 
-One bit is sent/received in 8 PIO clocks.
+When `USE_PIO_UART` is defined, the settings of the PIO-UART are set using the following:
 
-Maximal UART-PIO Baudrate: `pio_max_baud = clk_pio_max / 8 = 15,635MHz`
+```
+set(use_uart_baudrate 9600)
+set(use_uart_data_bit 3)
+set(use_uart_data_hblb 1)
+set(use_pio_clkdiv 0)
+```
 
-Minimal UART-PIO Baudrate: `pio_min_baud = clk_pio_min / 8 = 238,42Hz` 
+- `use_uart_baudrate` - specifies the baud-rate to be used by the PIO-UART.
+- `use_uart_data_bit` - specifies the frame format (bits/frame) to be used by the PIO-UART. (Currently supported: 3..16 bits/frame)
+- `use_uart_data_hblb` - when frame format is bigger than 8 bit/frame, every frame is sent to USB as two bytes. If `use_uart_data_hblb` is set to 1, the bytes are sent in the High-Byte/Low-Byte order.
+- `use_pio_clkdiv` - when `use_pio_clkdiv` is not 0, `use_uart_baudrate` is ignored and the baud-rate is calculated using formula: `use_uart_baudrate = 125MHz/(use_pio_clkdiv * 8)`
 
+__TX_ACTIVE_SIGNAL__
+
+This signal allows using UART together with RS-485 transceiver - to switch the transceiver between receive and transmit modes.
+
+```
+add_compile_definitions(TX_ACTIVE_SIGNAL=28)
+add_compile_definitions(TX_ACTIVE_SIGNAL_INVERTED)
+```
+
+- `TX_ACTIVE_SIGNAL` - specifies the GPIO pin to be used as TX_ACTIVE signal.
+- `TX_ACTIVE_SIGNAL_INVERTED` - when defined, the TX_ACTIVE signal is inverted (low active).
+
+__RX/TX Activity LEDs__
+
+Two outputs can be used to visually (by connecting a LED) indicate a receive or transmit activity:
+
+```
+add_compile_definitions(UART_RX_ACT_LED=16)
+add_compile_definitions(UART_TX_ACT_LED=17)
+```
+
+- `UART_RX_ACT_LED` - specifies the GPIO pin to toggle in case the UART is currently receiving data.
+- `UART_TX_ACT_LED` - specifies the GPIO pin to toggle in case the UART is currently transmiting data.
+
+__UART_RX_BYTES_TOUT__
+
+The following setting doesn't allow USB to send small packets for each received UART byte. Instead send UART->USB when no further data is received from UART for more than `UART_RX_BYTES_TOUT` bytes time (depending on baud-rate) or when more than 64 bytes have been received.
+
+```
+add_compile_definitions(UART_RX_BYTES_TOUT=2)
+```
 
 ## Build
 
@@ -128,9 +175,9 @@ sudo apt-get install usbutils
 
 ### Deploy firmware to Raspberry Pi Pico
 
-If the Raspberry Pi Pico has not yet been updated with `rpico_cdc_uart.uf2` (this is the first time the device is updated with this firmware), manually put the Raspberry Pi Pico into boot mode: unplug from USB, press BOOTSEL, plug in the USB, release BOOTSEL.
+If the Raspberry Pi Pico has not yet been updated with `rpico_cdc_uart.uf2` (this is the first time the device is updated with this firmware), manually put the Raspberry Pi Pico into boot mode (unplug from USB, press BOOTSEL, plug in the USB, release BOOTSEL) and copy the firmware to the mounted partition.
 
-If the Raspberry Pi Pico has already been updated with `rpico_cdc_uart.uf2`, the above step is not required. The `scripts/firmware_update.py` script checks if there is "TinyUSB" device connected, and sends a dummy byte at /dev/ttyACM0 uisng 1200 bps as baudrate. This reboots the device into boot mode.
+If the Raspberry Pi Pico has already been updated with `rpico_cdc_uart.uf2`, the above step is not required. The `scripts/firmware_update.py` script checks if there is "TinyUSB" device connected, and sends a dummy byte at /dev/ttyACM0 uisng 1200 bps as baud-rate. This reboots the device into boot mode.
 
 Use `make deploy` command to load the firmware into the Raspberry Pi Pico:
 
@@ -170,39 +217,13 @@ Python `pyserial` library is required to run the tests:
 sudo apt-get install python3-serial
 ```
 
-### How to test
+### Test Setups
 
-Use the python script `test/test.py` to test the data transfer:
-
-```bash
-python3 test/test.py --help
-usage: test.py [-h] [-b BAUDRATE] [-f FROM_VALUE] [-t TO_VALUE] [-n NO_CHECK] [-m TEST_MODE] dev1 dev2
-
-Test RPico_CDC_UART firmware.
-
-positional arguments:
-  dev1                  Serial Device 1 (Ex: /dev/ttyUSB0 for USB-UART converter, /dev/ttyACM0 for TinyUSB)
-  dev2                  Serial Device 2 (Ex: /dev/ttyUSB0 for USB-UART converter, /dev/ttyACM0 for TinyUSB)
-
-options:
-  -h, --help            show this help message and exit
-  -b BAUDRATE, --baudrate BAUDRATE
-                        Baudrate (default: 115200)
-  -f FROM_VALUE, --from FROM_VALUE
-                        Test range from (default: 1)
-  -t TO_VALUE, --to TO_VALUE
-                        Test range to (default: 2050)
-  -n NO_CHECK, --no-check NO_CHECK
-                        Do not check the result (default: 0)
-  -m TEST_MODE, --test-mode TEST_MODE
-                        Test mode: 0=D1->D2, 1=D1/D2, 2=rand(D1/D2), 3=rand(pack_len), 4=rand(D1/D2,pack_len) (default: 0)
-```
-
-### Test Setup: Raspberry Pi Pico + USB Serial Adapter
+__Raspberry Pi Pico + USB Serial Adapter__
 
 !["Pico-to-USB"](docs/test_setup_pico_usb_serial.png "Raspberry Pi Pico + USB Serial Adapter")
 
-### Test Setup: 2 x Raspberry Pi Pico
+__2 x Raspberry Pi Pico__
 
 !["Pico-to-Pico"](docs/test_setup_pico_pico.png "2 x Raspberry Pi Pico")
 
@@ -320,7 +341,23 @@ On Windows, the COM port driver does not automatically assert DTR when COM-Port 
 
 ## Notes
 
-### Transfer bottleneck
+### PIO Frequency Limits
+
+System Clock Frequency: `clk_sys = 125MHz`
+
+PIO Frequency: `clk_pio = clk_sys / (CLKDIV_INT + CLKDIV_FRAC/256)`
+
+Maximal PIO Frequency: `clk_pio_max = clk_sys / (1 + 0/256) = 125MHz`
+
+Minimal PIO Frequency: `clk_pio_min = clk_sys / (65536 + 0/256) = 1907,349Hz` 
+
+One bit is sent/received in 8 PIO clocks.
+
+Maximal PIO-UART Baudrate: `pio_max_baud = clk_pio_max / 8 = 15,635MHz`
+
+Minimal PIO-UART Baudrate: `pio_min_baud = clk_pio_min / 8 = 238,42Hz` 
+
+### Transfer Bottleneck
 
 USB (full speed 12 Mbps) is faster than UART. The bottleneck in USB-UART transmission is always UART. UART cannot send data as fast as USB receives.
 
