@@ -2,12 +2,13 @@
 
 !["RPico-CDC-UART_Cover"](docs/cover.png "RPico CDC UART Cover")
 
-An implementation of a USB-UART bridge for Raspberry Pi Pico (RP2040). The Pico device (which is powered by USB and recognized by the operating system as a CDC device) forwards all received USB data to its UART and data received from the UART back to USB, acting as a USB-UART bridge. 
+An implementation of a USB-UART bridge for Raspberry Pi Pico (RPico). The Pico device (which is powered by USB and recognized by the operating system as a CDC device) forwards all received USB data to its UART and data received from the UART back to USB, acting as a USB-UART bridge. 
 
 Main features:
-- Fully configurable UART: 3..16 bits/frame format; a wide range of baud-rates supported (238 bits/sec..1,5Mbits/sec); interrupt-based (non-blocking mode), maintaining the responsiveness of the main core.
+- PIO-UART - a fully configurable UART implemented using RP2040 PIO; supports a wide range of standard and non-standard baud-rates (from 238 bits/sec up to 3,1 Mbits/sec); supports a wide range of standard and non-standard frame formats (from 3 to 16 bits/frame); interrupt-based (non-blocking mode) - maintaining the responsiveness of the main core.
+- Peripheral-UART - a fully configurable UART implemented using RP2040 UART peripheral; supports only standard baud-rates; supports only standard frame formats (from 5 to 8 bits/frame); interrupt-based (non-blocking mode) - maintaining the responsiveness of the main core.
 - USB CDC uses the TinyUSB library running on a separate core, leaving the main core for UART-USB bridge processing.
-- A separate UART module (also fully configurable and interrupt-based) operating in ASCII mode and used as a logging and/or command line interface (profiling, debugging, etc.)
+- A separate UART module (also fully configurable and interrupt-based, implemented using RP2040 UART peripheral) operating in ASCII mode and used as a logging and/or command line interface (profiling, debugging, etc.)
 - Full Software control over data transfer.
 - A set of GPIO which can be used for different purposes:  trigger when some conditions are satisfied (ex: a special frame is received) or send some telegrams when an input level is detected.
 
@@ -20,6 +21,10 @@ Main features:
 **USB CDC** (USB Communications Device Class) is a composite Universal Serial Bus device class. This class can be used for industrial equipment such as CNC machinery to allow upgrading from older RS-232 serial controllers and robotics, since they can keep software compatibility. The device attaches to an RS-232 communications line and the operating system on the USB side makes the USB device appear as a traditional RS-232 port.
 
 USB CDC **ACM** (Abstract Control Model) is a vendor-independent publicly documented protocol that can be used for emulating serial ports over USB.
+
+**RPico** an abbreviation for "Raspberry Pi Pico".
+
+**RP2040** is a 32-bit dual-core ARM Cortex-M0+ microcontroller used in Raspberry Pi Pico board.
 
 **PIO** (Programmable I/O) is a piece of hardware developed for RP2040. It allows to create new types of (or additional) hardware interfaces on RP2040-based device. The PIO subsystem on RP2040 allows to write small, simple programs for what are called PIO state machines, of which RP2040 has eight split across two PIO instances. A state machine is responsible for setting and reading one or more GPIOs, buffering data to or from the processor (or RP2040’s ultra-fast DMA subsystem), and notifying the processor, via IRQ or polling, when data or attention is needed.
 
@@ -35,9 +40,9 @@ __USE_PIO_UART__
 
 The UART interface in the USB-UART bridge can work in one of two modes:
 - PIO-UART - UART is implemented in PIO. A wide range of non-standard baud-rates and frame-formats are supported. The UART settings are hardcoded in Firmware and cannot be changed on run-time.
-- UART - the RP2040 UART peripheral is used. Only the standard baud-rates and frame-formats are supported. The UART settings can be changed on run-time (when connecting to USB).
+- Peripheral-UART - the RP2040 UART peripheral is used. Only the standard baud-rates and frame-formats are supported. The UART settings can be changed on run-time (when connecting to USB).
 
-When the `USE_PIO_UART` is defined, the UART works in PIO-UART mode:
+When `USE_PIO_UART` is defined, the UART works in PIO-UART mode, when `USE_PIO_UART` is not defined, the UART works in Peripheral-UART mode.
 
 ```
 add_compile_definitions(USE_PIO_UART)
@@ -45,7 +50,7 @@ add_compile_definitions(USE_PIO_UART)
 
 __PIO-UART Settings__
 
-When `USE_PIO_UART` is defined, the settings of the PIO-UART are set using the following:
+When UART works in PIO-UART mode (`USE_PIO_UART` is defined), the settings of the PIO-UART are set using the following:
 
 ```
 set(use_uart_baudrate 9600)
@@ -68,12 +73,12 @@ add_compile_definitions(TX_ACTIVE_SIGNAL=28)
 add_compile_definitions(TX_ACTIVE_SIGNAL_INVERTED)
 ```
 
-- `TX_ACTIVE_SIGNAL` - specifies the GPIO pin to be used as TX_ACTIVE signal.
+- `TX_ACTIVE_SIGNAL` - specifies the GPIO pin to be used as TX_ACTIVE signal: is set active while UART sends data.
 - `TX_ACTIVE_SIGNAL_INVERTED` - when defined, the TX_ACTIVE signal is inverted (low active).
 
 __RX/TX Activity LEDs__
 
-Two outputs can be used to visually (by connecting a LED) indicate a receive or transmit activity:
+Two outputs can be used to visually indicate a receive or transmit activity (ex. by connecting a LED):
 
 ```
 add_compile_definitions(UART_RX_ACT_LED=16)
@@ -123,7 +128,7 @@ make
 
 ### Prerequisites: picotool
 
-The following steps describe the installation process of Picotool – a tool for interacting with Raspberry Pi Pico devices when they are in BOOTSEL mode (for example: firmware update).
+The following steps describe the installation process of Picotool – a tool for interacting with RPico devices when they are in BOOTSEL mode (for example: firmware update).
 
 __Getting picotool:__
 
@@ -167,45 +172,39 @@ sudo make install
 
 ### Prerequisites: usbtool
 
-`firmware_update.sh` script uses the `lsusb` command to identify the Raspberry Pi Pico connected to the USB Port. If `lsusb` is not available, install it using the following command:
+`firmware_update.sh` script uses the `lsusb` command to identify the RPico connected to the USB Port. If `lsusb` is not available, install it using the following command:
 
 ```bash
 sudo apt-get install usbutils
 ```
 
-### Deploy firmware to Raspberry Pi Pico
+### Deploy firmware to RPico
 
-If the Raspberry Pi Pico has not yet been updated with `rpico_cdc_uart.uf2` (this is the first time the device is updated with this firmware), manually put the Raspberry Pi Pico into boot mode (unplug from USB, press BOOTSEL, plug in the USB, release BOOTSEL) and copy the firmware to the mounted partition.
+If the RPico has not yet been updated with `rpico_cdc_uart.uf2` (this is the first time the device is updated with this firmware), manually put the RPico into boot mode (unplug from USB, press BOOTSEL, plug in the USB, release BOOTSEL) and copy the firmware to the mounted partition.
 
-If the Raspberry Pi Pico has already been updated with `rpico_cdc_uart.uf2`, the above step is not required. The `scripts/firmware_update.py` script checks if there is "TinyUSB" device connected, and sends a dummy byte at /dev/ttyACM0 uisng 1200 bps as baud-rate. This reboots the device into boot mode.
+If the RPico has already been updated with `rpico_cdc_uart.uf2`, the above step is not required. The `scripts/firmware_update.py` script checks if there is "TinyUSB" device connected, and sends a dummy byte at `/dev/ttyACM0` uisng 1200 bps as baud-rate. This reboots the device into boot mode.
 
-Use `make deploy` command to load the firmware into the Raspberry Pi Pico:
+Use `sudo make deploy` command to load the firmware into the RPico (which updates the `/dev/ttyACM0` device):
 
 ```bash
-$ make deploy
+$ sudo make deploy
 [  1%] Built target bs2_default
 [  4%] Built target bs2_default_library
-[  5%] Performing build step for 'pioasmBuild'
-[100%] Built target pioasm
-[  5%] Performing install step for 'pioasmBuild'
-[100%] Built target pioasm
-Install the project...
--- Install configuration: "Release"
-[  6%] Completed 'pioasmBuild'
-[ 11%] Built target pioasmBuild
-[ 12%] Built target rpico_cdc_uart_puart_tx_pio_h
+[  5%] Built target rpico_cdc_uart_puart_tx_pio_h
+[  6%] Built target rpico_cdc_uart_puart_rx_pio_h
 [ 98%] Built target rpico_cdc_uart
 [100%] Deploying the firmware to pico
 Deploying to pico...
-TinyUSB Device found. Try to jump to Boot.
-Bus 001 Device 012: ID 2e8a:0003 Raspberry Pi RP2 Boot
+TinyUSB Device found, assuming this is /dev/ttyACM0. Try to jump to Boot.
+Bus 001 Device 107: ID 2e8a:0003 Raspberry Pi RP2 Boot
 Raspberry Pi RP2 Boot found.
 Update device with firmware: rpico_cdc_uart.uf2
 Loading into Flash:   [==============================]  100%
 Success, reboot device.
-The device was rebooted into application mode.
 [100%] Built target deploy
 ```
+
+If two RPico devices must be updated at the same time (for example while executing PIO-UART tests) the `sudo make deployall` command ca be used (which loads the firmware into `/dev/ttyACM0` and `/dev/ttyACM1` devices).
 
 ## Test
 
@@ -219,90 +218,70 @@ sudo apt-get install python3-serial
 
 ### Test Setups
 
-__Raspberry Pi Pico + USB Serial Adapter__
+Depending which UART mode is tested (Peripherl-UART or PIO-UART) one of the following two test-setups is used:
 
-!["Pico-to-USB"](docs/test_setup_pico_usb_serial.png "Raspberry Pi Pico + USB Serial Adapter")
+__Peripheral-UART mode: RPico + USB Serial Adapter__
 
-__2 x Raspberry Pi Pico__
+!["Pico-to-USB"](docs/test_setup_pico_usb_serial.png "RPico + USB Serial Adapter")
 
-!["Pico-to-Pico"](docs/test_setup_pico_pico.png "2 x Raspberry Pi Pico")
+When testing Peripheral-UART mode, a standard USB Serial Adapter TTL can be used (for example FT232 module). The RXD signal from RPico is connected to the TXD signal of the USB Serial Adapter, and the TXD signal from RPico is connected to the RXD signal of the USB Serial Adapter. Both devices are connected to USB ports to a PC. The RPico is detected as `/dev/ttyACMx` and the USB Serial Adapter as `/dev/ttyUSBx`.
 
-### Test Examples
+__PIO-UART mode: 2 x RPico__
 
-Example USB->Pico, 1000 bytes (from 1 to 1000), baudrate 115200 bps:
+!["Pico-to-Pico"](docs/test_setup_pico_pico.png "2 x RPico")
 
-```bash
-python3 test/test.py --to 1000 -b 115200 /dev/ttyUSB0 /dev/ttyACM0
-```
+When testing PIO-UART mode, two RPico could be used (the standard USB Serial Adapter TTL do not recognize the non-standard frame formats and baudrates and therefore cannot be used). The RXD signal from one RPico is connected to the TXD signal of the second RPico and vice versa. Both devices are connected to USB ports to a PC. Both RPico are detected as `/dev/ttyACMx`.
 
-Example Pico->USB, 200 bytes (from 100 to 300), baudrate 9600 bps:
+### Test using sertest.py
 
-```bash
-python3 test/test.py --from 100 --to 300 -b 9600 /dev/ttyACM0 /dev/ttyUSB0
-```
+`sertest.py` script executes a data transfer test from one device to the second device. The script sends data packets of a specific length and containing a specific data template to one device, meanwhile recieves all incoming data from the second device. If the data received from the second device matches the data sent to the first device - the test passed, if not - the test failed. 
 
-Example Pico1<->Pico2, random directions (Pico1->Pico2, Pico2->Pico1) for every packet:
+The scripts allows to automatically execute multiple tests with different data packet lengts. In this case, a starting packet length and an ending packet length are specified - the script performs a series of tests with different packet lengths within this range.
 
-```bash
-python3 test/test.py --to 1000 -m 2 /dev/ttyACM0 /dev/ttyACM1
-```
+The scripts allows to automatically change the direction of the data transfer for every data packet: direct - from first device to second device, reverse - from second device to first device, repeatedly - first device to second device and vice versa repeatedly, random - randomly from one deivce to other device.
 
-Example Pico1->Pico2, random packet length:
+In case of testing Peripheral-UART mode, the script automatically configures the RPico with required UART settings.
+
+In case of testing PIO-UART mode, the script cannot configure the RPico UART settings (the UART settings are hardcoded). In this case, before executing the test, a correct configuration must be set in `CMakeLists.txt` and the resulting Firmware uploaded into RPico.
+
+The script accepts the following arguments:
 
 ```bash
-python3 test/test.py --to 1000 -m 3 /dev/ttyACM0 /dev/ttyACM1
+$ python3 sertest.py
+usage: sertest.py [-h] [-b BAUDRATE] [-c BIT_CNT] [-f FROM_VALUE] [-t TO_VALUE] [-n NO_CHECK] [-m TEST_MODE] dev1 dev2
 ```
 
-### Tests Results
+Where:
 
-__Tests Standart Baudrates/Frame-Formats PIO-UART<->FTDI232__
+- `-b BAUDRATE` specifies the baud-rate to be used (example: 115200 for 115200 bits/sec).
+- `-c BIT_CNT` frame-format to be used (example: 3 for 3 bits/frame).
+- `-f FROM_VALUE` and `-t TO_VALUE` starting packet length and an ending packet length.
+- `-n NO_CHECK` do not test if the received data matches the sent data.
+- `-m TEST_MODE` data template and test-mode used in the test, supports following values:
+    - 0 - data packets sent from `dev1` to `dev2`, every new test increments the data packet length
+    - 1 - data packets sent from `dev2` to `dev1`, every new test increments the data packet length
+    - 2 - data packets sent repeatedly `dev1`->`dev2`, `dev2`->`dev1`, every new test increments the data packet length
+    - 3 - data packets sent randomly `dev1`->`dev2` or `dev2`->`dev1`, every new test increments the data packet length
+    - 4 - data packets sent from `dev1` to `dev2`, data packets have a random length
+    - 5 - data packets sent from `dev2` to `dev1`, data packets have a random length
+    - 6 - data packets sent randomly `dev1`->`dev2` or `dev2`->`dev1`, data packets have a random length
+- `dev1` first device (`/dev/ttyACMx` for RPico or `/dev/ttyUSBx` for USB Serial Adapter)
+- `dev2` second device (`/dev/ttyACMx` for RPico or `/dev/ttyUSBx` for USB Serial Adapter)
 
-Data transfers (both directions, different packet sizes) between /dev/ttyACM (PIO-UART) and /dev/ttyUSB (FTDI232):
+Example testing PIO-UART, 9600 bits/sec, 11 bits/frame, data packet length from 1 to 100 bytes, test mode 2:
 
-__Test PIO-UART<->FTDI232__
+```
+ $ python3 sertest.py -b 9600 -c 11 -f 1 -t 100 -m 2 /dev/ttyACM0 /dev/ttyACM1
++---------------+---------------+-----------+--------+---------+------------+------+------+----------+-----------+
+| Device1       | Device2       | Baud-Rate | CLKDIV | Bit-Cnt | Big-Endian | From | To   | No-Check | Test-Mode |
+| /dev/ttyACM0  | /dev/ttyACM1  | 9600      | 0      | 11      | 1          | 1    | 100  | 0        | 2         |
++---------------+---------------+-----------+--------+---------+------------+------+------+----------+-----------+
+End of test, Result: True ( 100 )##############]   100 /dev/ttyACM0->/dev/ttyACM1 (pack.size: 100)
+```
 
-| Baudrate | Bit/Frame |
-| -------- | --------- |
-| 9600     | 7, 8      |
-| 14400    | 7, 8      |
-| 19200    | 7, 8      |
-| 38400    | 7, 8      |
-| 57600    | 7, 8      |
-| 115200   | 7, 8      |
-| 230400   | 7, 8      |
+### Test using test_master.py
 
-__Test PIO-UART<->PIO-UART__
-
-| Baudrate | Bit/Frame [Test Mode, X^ means inverted direction]                             |
-| -------- | ------------------------------------------------------------------------------ |
-| 238      | 3[0,0^,4], 4[0,0^,4], 5[0,0^,4], 8[0,0^,4], 9[0,0^,4], 16[0,0^,4]              |
-| 9600     | 3[0,0^,4], 5[0,0^,4], 7[0,0^,4], 8[0,0^,4], 9[0,0^,4], 10[0,0^,4], 16[0,0^,4]  |
-| 14400    | 3[1,2^,3], 6[0,0^,4], 8[1,2^,3], 9[1,2^,3], 16[0,0^,4]                         |
-| 19200    | 3[0,0^,4], 7[0,0^,4], 9[0,0^,4], 14[0,0^,4]                                    |
-| 38400    | 3[1,2^,3], 5[1,2^,3], 8[0,0^,4], 9[1,2^,3], 16[0,0^,4]                         |
-| 57600    | 3[0,0^,4], 7[1,2^,4], 9[1,2^,3], 13[0,0^,4]                                    |
-| 115200   | 3[0,0^,4], 4[0,0^,4], 8[0,0^,4], 9[0,0^,4], 16[0,0^,4]                         |
-| 230400   | 3[0,0^,4], 5[0,0^,4], 7[0,0^,4], 9[0,0^,4], 16[0,0^,4]                         |
-| 1562500  | 6[0,0^,4], 8[0,0^,4], 9[0,0^,4], 16[0,0^,4]                                    |
-
-__Measure actual Bit-Length for different Baudrates and PIO Frequencies__
-
-All tests executed in 9 bit frame format.
-
-| Baudrate | Measured Bit (Baudr) | CLKDIV_INT | CLKDIV_FRAC |  PIO Freq.  | element_req_ustime |
-| -------- | -------------------- | ---------- | ----------- | ----------- | ------------------ |
-| 238      | 4,20ms  (238)        | 65535      | 0           |     1907,37 | 50420us            |
-| 9600     | 104us   (9615)       | 1627       | 155         |    76799,93 | 1250us             |
-| 14400    | 69,4us  (14409)      | 1085       | 18          |   115199,90 | 833us              |
-| 19200    | 52,1us  (19193)      | 813        | 205         |   153600,24 | 625us              |
-| 38400    | 26us    (38461)      | 406        | 231         |   307199,01 | 312us              |
-| 57600    | 17,36us (57603)      | 271        | 68          |   460802,94 | 208us              |
-| 115200   | 8,68us  (115207)     | 135        | 162         |   921605,89 | 104us              |
-| 230400   | 4.34us  (230302)     | 67         | 209         |  1843211,79 | 52us               |
-| 1562500  | 640ns   (1562500)    | 10         | 0           | 12500000,00 | 7us                |
-| 3125000* | 320ns   (3125000)    | 5          | 0           | 25000000,00 | 3us                |
-
-(*) 3125000 Bits/second is not stable, sometimes the software cannot read on time the received data from PIO and the data is lost. Maybe can be fixed by implementing DMA.
+==TODO==
 
 ## Known Issues
 
@@ -357,6 +336,25 @@ Maximal PIO-UART Baudrate: `pio_max_baud = clk_pio_max / 8 = 15,635MHz`
 
 Minimal PIO-UART Baudrate: `pio_min_baud = clk_pio_min / 8 = 238,42Hz` 
 
+### Measured Bit-Length
+
+All tests executed in 9 bit frame format.
+
+| Baudrate | Measured Bit (Baudr) | CLKDIV_INT | CLKDIV_FRAC |  PIO Freq.  | element_req_ustime |
+| -------- | -------------------- | ---------- | ----------- | ----------- | ------------------ |
+| 238      | 4,20ms  (238)        | 65535      | 0           |     1907,37 | 50420us            |
+| 9600     | 104us   (9615)       | 1627       | 155         |    76799,93 | 1250us             |
+| 14400    | 69,4us  (14409)      | 1085       | 18          |   115199,90 | 833us              |
+| 19200    | 52,1us  (19193)      | 813        | 205         |   153600,24 | 625us              |
+| 38400    | 26us    (38461)      | 406        | 231         |   307199,01 | 312us              |
+| 57600    | 17,36us (57603)      | 271        | 68          |   460802,94 | 208us              |
+| 115200   | 8,68us  (115207)     | 135        | 162         |   921605,89 | 104us              |
+| 230400   | 4.34us  (230302)     | 67         | 209         |  1843211,79 | 52us               |
+| 1562500  | 640ns   (1562500)    | 10         | 0           | 12500000,00 | 7us                |
+| 3125000* | 320ns   (3125000)    | 5          | 0           | 25000000,00 | 3us                |
+
+3125000 Bits/second is not stable, sometimes the software cannot read on time the received data from PIO and the data is lost. Maybe can be fixed by implementing DMA.
+
 ### Transfer Bottleneck
 
 USB (full speed 12 Mbps) is faster than UART. The bottleneck in USB-UART transmission is always UART. UART cannot send data as fast as USB receives.
@@ -385,7 +383,7 @@ Solution:
 ### UART/USB devices in Linux
 
 `/dev/ttyUSB0` - USB-UART converter, a separate IC (usually FTDI).
-`/dev/ttyACM0` - Raspberry Pi Pico with TinyUSB library that implements CDC ACM (USB Communications Device Class).
+`/dev/ttyACM0` - RPico with TinyUSB library that implements CDC ACM (USB Communications Device Class).
 
 ### Implement TX_ACTIVE Signal
 
