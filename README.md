@@ -51,7 +51,17 @@ A vendor-independent protocol that enables emulation of serial ports over USB.
 
 ## Configuration
 
-The USB–UART bridge can be configured by editing the `src/CMakeLists.txt` file.
+Hard-coded configuration:
+
+PIO-UART and Peripheral-UART pins:
+- `PUART_TX_PIN`,`UART_TX_PIN`: GP0
+- `PUART_RX_PIN`,`UART_RX_PIN`: GP1
+
+Logging-UART pins:
+- `UART_ASCII_TX_PIN`: GP8
+- `UART_ASCII_RX_PIN`: GP9
+
+The USB–UART bridge can be configured by editing the `src/CMakeLists.txt` file:
 
 ### USE_PIO_UART
 

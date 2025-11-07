@@ -27,7 +27,7 @@ add_compile_definitions(PUART_DRV_DEBUG)
 # If CONFIG_PIO_CLKDIV is defined, apply it as CLKDIV_INT for PIO (CLKDIV_FRAC is 0)
 # In this case the Baudrate is calculated based on CLKDIV_INT
 
-set(use_uart_baudrate 9600)
+set(use_uart_baudrate 62500)
 set(use_uart_data_bit 9)
 set(use_uart_data_hblb 1)
 set(use_pio_clkdiv 0)
