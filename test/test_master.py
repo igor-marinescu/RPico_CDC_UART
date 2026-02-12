@@ -132,7 +132,7 @@ def change_cmake(file_name, baud_rate, pio_clkdiv, bit_cnt, data_hblb):
     with open(file_name, 'r') as file:
         filedata = file.read()
 
-    filedata = cmake_func.change_set_var_value(filedata, 'use_uart_baudrate', str(baud_rate))
+    filedata = cmake_func.change_set_var_value(filedata, 'use_pio_baudrate', str(baud_rate))
     if not filedata:
         return False
 
@@ -140,11 +140,11 @@ def change_cmake(file_name, baud_rate, pio_clkdiv, bit_cnt, data_hblb):
     if not filedata:
         return False
 
-    filedata = cmake_func.change_set_var_value(filedata, 'use_uart_data_bit', str(bit_cnt))
+    filedata = cmake_func.change_set_var_value(filedata, 'use_pio_data_bit', str(bit_cnt))
     if not filedata:
         return False
     
-    filedata = cmake_func.change_set_var_value(filedata, 'use_uart_data_hblb', str(data_hblb))
+    filedata = cmake_func.change_set_var_value(filedata, 'use_pio_data_hblb', str(data_hblb))
     if not filedata:
         return False
 

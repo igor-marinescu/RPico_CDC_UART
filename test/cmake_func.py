@@ -239,7 +239,7 @@ def test_change_cmake(file_name_in, file_name_out):
     #if not filedata:
     #    return False
 
-    filedata = change_set_var_value(filedata, 'use_uart_baudrate', str(215211))
+    filedata = change_set_var_value(filedata, 'use_pio_baudrate', str(215211))
     if not filedata:
         return False
 

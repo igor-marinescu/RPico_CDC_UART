@@ -72,31 +72,31 @@ The UART interface can operate in one of two modes:
 - **Peripheral-UART** – uses the RP2040 UART peripheral; supports only standard baud rates and frame formats.  
   UART settings can be changed at runtime (when connected via USB).
 
-When `USE_PIO_UART` is defined, the UART operates in PIO-UART mode.  
+When `use_pio_uart` is set to `1` in `CMakeLists.txt`, the UART operates in PIO-UART mode:
 
 ```
-add_compile_definitions(USE_PIO_UART)
+set(use_pio_uart 1)
 ```
 
-When it is not defined, Peripheral-UART mode is used.
+When `use_pio_uart` is set to `0`, Peripheral-UART mode is used.
 
 ### PIO-UART Settings
 
-When `USE_PIO_UART` is defined, configure the following parameters:
+When `use_pio_uart` is set to 1, configure the following parameters in `CMakeLists.txt`:
 
 ```
-set(use_uart_baudrate 9600)
-set(use_uart_data_bit 3)
-set(use_uart_data_hblb 1)
+set(use_pio_baudrate 9600)
+set(use_pio_data_bit 3)
+set(use_pio_data_hblb 1)
 set(use_pio_clkdiv 0)
 ```
 
-- `use_uart_baudrate` – specifies the baud rate used by the PIO-UART.  
-- `use_uart_data_bit` – specifies the frame format (3–16 bits/frame).  
-- `use_uart_data_hblb` – when the frame format exceeds 8 bits, each frame is sent to USB as two bytes.  
+- `use_pio_baudrate` – specifies the baud rate used by the PIO-UART.  
+- `use_pio_data_bit` – specifies the frame format (3–16 bits/frame).  
+- `use_pio_data_hblb` – when the frame format exceeds 8 bits, each frame is sent to USB as two bytes.  
   If set to `1`, bytes are sent in high-byte/low-byte order.  
-- `use_pio_clkdiv` – if not `0`, `use_uart_baudrate` is ignored and the baud rate is calculated as:  
-  `use_uart_baudrate = 125MHz / (use_pio_clkdiv * 8)`
+- `use_pio_clkdiv` – if not `0`, `use_pio_baudrate` is ignored and the baud rate is calculated as:  
+  `use_pio_baudrate = 125MHz / (use_pio_clkdiv * 8)`
 
 ### TX_ACTIVE_SIGNAL
 
